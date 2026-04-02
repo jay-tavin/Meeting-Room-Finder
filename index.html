@@ -53,7 +53,7 @@
 
   .search-dropdown {
     position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
-    width: 300px; margin-top: 6px;
+    width: 300px; margin-top: 0;
     background: rgba(255,255,255,0.95); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
     border-radius: 16px; overflow: hidden;
     box-shadow: 0 12px 40px rgba(0,0,0,0.15); border: 1px solid rgba(0,0,0,0.06);
@@ -129,7 +129,7 @@
   .route-card {
     position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(120px);
     z-index: 100; background: rgba(255,255,255,0.92); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
-    border-radius: 18px; padding: 16px 22px; min-width: 300px;
+    border-radius: 18px; padding: 16px 22px; min-width: 300px; max-width: 480px; width: calc(100vw - 40px);
     box-shadow: 0 12px 40px rgba(0,0,0,0.15); border: 1px solid rgba(0,0,0,0.06);
     transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s;
     opacity: 0; pointer-events: none;
@@ -154,6 +154,27 @@
   .route-card-line { display: flex; align-items: center; gap: 0; flex: 1; margin: 0 4px; }
   .route-card-line-dot { width: 5px; height: 5px; border-radius: 50%; }
   .route-card-line-seg { flex: 1; height: 2px; background: linear-gradient(90deg, var(--blue), var(--green)); border-radius: 1px; }
+  .route-card-country { font-size: 11px; color: var(--text-secondary); margin-top: 3px; display: flex; align-items: center; gap: 3px; }
+  .route-card-country-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--text-muted); flex-shrink: 0; }
+  .route-card-divider { height: 1px; background: rgba(0,0,0,0.06); margin: 12px 0 10px; }
+  .route-card-fact {
+    background: linear-gradient(135deg, rgba(255,159,10,0.07) 0%, rgba(255,204,0,0.05) 100%);
+    border-radius: 12px; padding: 11px 13px;
+    border: 1px solid rgba(255,159,10,0.18);
+    animation: factFadeIn 0.3s ease;
+    cursor: grab; user-select: none; overflow: hidden;
+  }
+  .route-card-fact:active { cursor: grabbing; }
+  @keyframes factFadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes factSlideLeft  { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes factSlideRight { from { opacity: 0; transform: translateX(-18px); } to { opacity: 1; transform: translateX(0); } }
+  .route-card-fact-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
+  .route-card-fact-label { font-size: 10px; font-weight: 700; color: #c07800; text-transform: uppercase; letter-spacing: 0.6px; }
+  .route-card-fact-hint { font-size: 9px; color: var(--text-muted); font-style: normal; }
+  .route-card-fact-text { font-size: 12px; color: var(--text-secondary); line-height: 1.55; font-style: italic; }
+  .route-card-fact-dots { display: flex; justify-content: center; gap: 5px; margin-top: 9px; }
+  .fact-dot { width: 5px; height: 5px; border-radius: 50%; background: rgba(192,120,0,0.2); transition: all 0.25s ease; flex-shrink: 0; }
+  .fact-dot.active { width: 14px; border-radius: 3px; background: #c07800; }
 
   #map-container { width: 100%; height: 100%; cursor: grab; position: relative; }
   #map-container:active { cursor: grabbing; }
@@ -341,6 +362,10 @@
     <div class="route-card-header">
       <div class="route-card-info">
         <div class="route-card-dest" id="rc-dest"></div>
+        <div class="route-card-country" id="rc-country" style="display:none;">
+          <span class="route-card-country-dot"></span>
+          <span id="rc-country-text"></span>
+        </div>
       </div>
       <button class="route-card-close" id="rc-close">✕</button>
     </div>
@@ -352,6 +377,15 @@
         <div class="route-card-line-dot" style="background:var(--green);"></div>
       </div>
       <span class="route-card-to" id="rc-to">🏁 Room</span>
+    </div>
+    <div class="route-card-divider" id="rc-divider" style="display:none;"></div>
+    <div class="route-card-fact" id="rc-fact-box" style="display:none;">
+      <div class="route-card-fact-header">
+        <span class="route-card-fact-label">💡 Did you know?</span>
+        <span class="route-card-fact-hint">swipe ←→</span>
+      </div>
+      <div class="route-card-fact-text" id="rc-fact-text"></div>
+      <div class="route-card-fact-dots" id="rc-fact-dots"></div>
     </div>
   </div>
 
@@ -372,6 +406,9 @@
 
       <!-- Grey open area (left wing - between Quezon/Adelaide and Auckland/desks) -->
       <div style="position:absolute; left:300px; top:295px; width:270px; height:315px; background:#eae8e4; border-radius: 8px; border: 1px solid #ddd9d3;"></div>
+
+      <!-- Walkway above Guilin/Haiphong/Cebu City/Auckland -->
+      <div style="position:absolute; left:152px; top:340px; width:418px; height:25px; background:var(--floor);"></div>
 
       <!-- Core -->
       <div class="core-area" style="left:640px; top:360px; width:570px; height:260px;"></div>
@@ -428,19 +465,19 @@
       <div class="room" data-name="Bandung" data-type="Meeting Room" style="left:52px; top:30px; width:120px; height:70px;">
         <span class="room-label">Bandung</span>
       </div>
-      <div class="room" data-name="Nadi" data-type="Meeting Room" style="left:320px; top:130px; width:130px; height:70px;">
+      <div class="room" data-name="Nadi" data-type="Meeting Room" style="left:320px; top:100px; width:130px; height:70px;">
         <span class="room-label">Nadi</span>
       </div>
-      <div class="room" data-name="Guilin" data-type="Desk" style="left:320px; top:300px; width:55px; height:45px;">
+      <div class="room" data-name="Guilin" data-type="Meeting Room" style="left:320px; top:295px; width:55px; height:45px;">
         <span class="room-label">Guilin</span>
       </div>
-      <div class="room" data-name="Haiphong" data-type="Desk" style="left:380px; top:300px; width:60px; height:45px;">
+      <div class="room" data-name="Haiphong" data-type="Meeting Room" style="left:375px; top:295px; width:60px; height:45px;">
         <span class="room-label">Haiphong</span>
       </div>
-      <div class="room" data-name="Cebu City" data-type="Desk" style="left:445px; top:300px; width:60px; height:45px;">
+      <div class="room" data-name="Cebu City" data-type="Meeting Room" style="left:435px; top:295px; width:60px; height:45px;">
         <span class="room-label">Cebu City</span>
       </div>
-      <div class="room" data-name="Auckland" data-type="Meeting Room" style="left:510px; top:300px; width:75px; height:45px;">
+      <div class="room" data-name="Auckland" data-type="Meeting Room" style="left:495px; top:295px; width:75px; height:45px;">
         <span class="room-label">Auckland</span>
       </div>
       <div class="room" data-name="Gwangju" data-type="Meeting Room" style="left:52px; top:320px; width:100px; height:60px;">
@@ -449,10 +486,10 @@
       <div class="room" data-name="Hanoi" data-type="Meeting Room" style="left:650px; top:100px; width:80px; height:65px;">
         <span class="room-label">Hanoi</span>
       </div>
-      <div class="room" data-name="Kyoto" data-type="Meeting Room" style="left:740px; top:100px; width:80px; height:65px;">
+      <div class="room" data-name="Kyoto" data-type="Meeting Room" style="left:730px; top:100px; width:80px; height:65px;">
         <span class="room-label">Kyoto</span>
       </div>
-      <div class="room" data-name="Dili" data-type="Meeting Room" style="left:830px; top:100px; width:70px; height:65px;">
+      <div class="room" data-name="Dili" data-type="Meeting Room" style="left:810px; top:100px; width:70px; height:65px;">
         <span class="room-label">Dili</span>
       </div>
       <div class="room" data-name="Bangkok" data-type="Meeting Room" style="left:640px; top:300px; width:100px; height:60px;">
@@ -470,25 +507,25 @@
       <div class="room" data-name="Wroclaw" data-type="Meeting Room" style="left:1030px; top:100px; width:80px; height:65px;">
         <span class="room-label">Wroclaw</span>
       </div>
-      <div class="room" data-name="Zagreb" data-type="Meeting Room" style="left:1120px; top:100px; width:80px; height:65px;">
+      <div class="room" data-name="Zagreb" data-type="Meeting Room" style="left:1110px; top:100px; width:80px; height:65px;">
         <span class="room-label">Zagreb</span>
       </div>
-      <div class="room" data-name="Orkney" data-type="Meeting Room" style="left:1210px; top:100px; width:80px; height:65px;">
+      <div class="room" data-name="Orkney" data-type="Meeting Room" style="left:1190px; top:100px; width:80px; height:65px;">
         <span class="room-label">Orkney</span>
       </div>
       <div class="room" data-name="Seville" data-type="Meeting Room" style="left:1390px; top:200px; width:90px; height:60px;">
         <span class="room-label">Seville</span>
       </div>
-      <div class="room" data-name="Ponta Delgada" data-type="Meeting Room" style="left:1390px; top:320px; width:90px; height:50px;">
+      <div class="room" data-name="Ponta Delgada" data-type="Meeting Room" style="left:1390px; top:260px; width:90px; height:50px;">
         <span class="room-label">Ponta Delgada</span>
       </div>
       <div class="room" data-name="Lounge" data-type="Lounge Area" style="left:360px; top:520px; width:120px; height:60px; background:rgba(255,159,10,0.05); border-color:rgba(255,159,10,0.2);">
         <span class="room-icon">☕</span><span class="room-label" style="color:#b36b00;">Lounge</span>
       </div>
-      <div class="room" data-name="Quezon City" data-type="Meeting Room" style="left:270px; top:620px; width:140px; height:60px;">
+      <div class="room" data-name="Quezon City" data-type="Meeting Room" style="left:300px; top:610px; width:140px; height:60px;">
         <span class="room-label">Quezon City</span>
       </div>
-      <div class="room" data-name="Adelaide" data-type="Meeting Room" style="left:430px; top:620px; width:120px; height:60px;">
+      <div class="room" data-name="Adelaide" data-type="Meeting Room" style="left:450px; top:610px; width:120px; height:60px;">
         <span class="room-label">Adelaide</span>
       </div>
       <div class="room" data-name="Shanghai" data-type="Meeting Room" style="left:52px; top:680px; width:120px; height:60px;">
@@ -519,10 +556,10 @@
         <span class="room-icon" style="font-size:20px;">☕</span><span class="room-label" style="font-size:13px;">Café</span>
       </div>
 
-      <div class="restroom" data-name="Men's Restroom" data-type="Restroom" style="left:500px; top:430px; width:70px; height:50px;">
+      <div class="restroom" data-name="Men's Restroom" data-type="Restroom" style="left:490px; top:368px; width:80px; height:160px;">
         <span class="room-icon">🚹</span><span class="room-label">Men</span>
       </div>
-      <div class="restroom" data-name="Women's Restroom" data-type="Restroom" style="left:980px; top:470px; width:70px; height:50px;">
+      <div class="restroom" data-name="Women's Restroom" data-type="Restroom" style="left:980px; top:435px; width:80px; height:180px;">
         <span class="room-icon">🚺</span><span class="room-label">Women</span>
       </div>
       <div class="restroom" data-name="All Gender Restroom" data-type="Restroom" style="left:965px; top:625px; width:75px; height:45px;">
@@ -532,7 +569,7 @@
         <span class="room-icon">🚻</span><span class="room-label">All Gender</span>
       </div>
 
-      <div class="team-area" data-name="PD | Global Design" data-type="Team Area · Your Location" style="left:1330px; top:430px; width:150px; height:170px;">
+      <div class="team-area" data-name="PD | Global Design" data-type="Team Area · Your Location" style="left:1330px; top:360px; width:150px; height:240px;">
         <span class="room-icon" style="font-size:18px; opacity:0.3;">🏠</span>
         <span class="room-label" style="font-size:10px;">PD | Global Design</span>
         <span class="room-sublabel" style="color:#cc7a00;">YOUR WAYPOINT</span>
@@ -676,16 +713,14 @@ const W = {
   C1: { x: 780, y: 780 }, C2: { x: 950, y: 780 }, C3: { x: 1100, y: 780 },
   // Around rooms: left of Ashgabat, right of Milan
   AR1: { x: 780, y: 650 }, AR2: { x: 1230, y: 650 },
-  // Middle crossings above core
-  M1: { x: 625, y: 310 }, M2: { x: 900, y: 310 }, M3: { x: 1000, y: 310 }, M4: { x: 1150, y: 310 },
+  // Middle crossings above core (y=265 = clear gap between top rooms ending at y=165 and middle rooms starting at y=295)
+  M1: { x: 625, y: 265 }, M2: { x: 900, y: 265 }, M3: { x: 1000, y: 265 }, M4: { x: 1150, y: 265 },
   // Bottom-left
   BL1: { x: 450, y: 650 }, BL2: { x: 450, y: 740 }, BL3: { x: 600, y: 740 },
   // Bottom-right
   BR1: { x: 1230, y: 780 },
   // Far-right upper
   FR1: { x: 1430, y: 340 }, FR2: { x: 1430, y: 230 },
-  // South-core corridor (30px below core bottom at y=620, above room tops at y=650)
-  SC1: { x: 640, y: 630 }, SC2: { x: 1215, y: 630 },
 };
 
 const EDGES = [
@@ -697,14 +732,14 @@ const EDGES = [
   // Bottom corridor above rooms
   ['B1','B2'], ['B2','AR1'], ['AR2','B5'], ['B5','R4'],
   // Café corridor below rooms
-  ['AR1','C1'], ['C1','C2'], ['C2','C3'], ['C3','AR2'],
-  ['C3','BR1'], ['BR1','R5'],
+  ['AR1','C1'], ['C1','C2'], ['C2','C3'],
+  ['C3','BR1'], ['BR1','R5'], ['AR2','BR1'],
   // Connect café corridor to bottom-left
   ['C1','BL3'],
   // Vertical connections
   ['T5','M1'], ['M1','B1'],
   ['T4','B2'],
-  ['T1','M4'], ['M4','B5'],
+  ['T1','M4'],
   ['R2','M4'],
   // Middle corridor above core (M1–M4 horizontal + vertical drops from top corridor)
   ['M1','M2'], ['M2','M3'], ['M3','M4'],
@@ -712,8 +747,6 @@ const EDGES = [
   ['BL1','BL2'], ['BL2','BL3'], ['BL3','B1'],
   ['L5','BL2'],
   ['R4','AR2'],
-  // South-core corridor: connects left and right sides through the gap below core, above rooms
-  ['B1','SC1'], ['SC1','SC2'], ['SC2','B5'],
   ['R2','FR1'], ['FR1','FR2'], ['FR2','R3'],
 ];
 
@@ -766,6 +799,12 @@ const rcDest = document.getElementById('rc-dest');
 const rcTime = document.getElementById('rc-time');
 const rcTo = document.getElementById('rc-to');
 const rcClose = document.getElementById('rc-close');
+const rcCountry = document.getElementById('rc-country');
+const rcCountryText = document.getElementById('rc-country-text');
+const rcDivider = document.getElementById('rc-divider');
+const rcFactBox = document.getElementById('rc-fact-box');
+const rcFactText = document.getElementById('rc-fact-text');
+const rcFactDots = document.getElementById('rc-fact-dots');
 const allRooms = document.querySelectorAll('[data-name]');
 let activeTarget = null;
 
@@ -821,6 +860,37 @@ const COUNTRY_EMOJI = {
   'Trondheim':      '🇳🇴',
 };
 
+const CITY_DATA = {
+  'Bandung':        { country: 'Indonesia', facts: ['Bandung is nicknamed "Paris van Java" for its Dutch colonial architecture and cool highland climate.', 'At 768m above sea level, Bandung sits in a volcanic basin surrounded by over 30 volcanoes.', 'The world\'s first Asia-Africa Conference was held here in 1955, attended by 29 newly independent nations.', 'Bandung is home to Indonesia\'s prestigious Institut Teknologi Bandung (ITB), founded in 1920.', 'The city is considered Indonesia\'s fashion capital, famous for its factory outlets and creative scene.'] },
+  'Nadi':           { country: 'Fiji', facts: ['Nadi is pronounced "Nandi" — in Fijian, the letter "d" is always preceded by a nasal "n" sound.', 'Nadi is home to the Sri Siva Subramaniya temple — the largest Hindu temple in the Southern Hemisphere.', 'The city sits on the dry side of Viti Levu, receiving far less rainfall than Suva, the capital.', 'Nadi serves as the gateway to over 300 Fijian islands via its international airport.', 'Sugar cane farming has been central to Nadi\'s economy since the 19th century, brought by Indian laborers.'] },
+  'Guilin':         { country: 'China', facts: ['Guilin\'s iconic karst limestone peaks have inspired Chinese landscape paintings for over 1,000 years.', 'The Li River cruise from Guilin to Yangshuo is depicted on the back of the Chinese 20 yuan banknote.', 'Guilin\'s name means "Forest of Sweet Osmanthus" — the city\'s streets are lined with osmanthus trees.', 'The Reed Flute Cave features stalactites and rock formations up to 180 million years old.', 'Guilin has been a cultural and political center since the Qin Dynasty, over 2,000 years ago.'] },
+  'Haiphong':       { country: 'Vietnam', facts: ['Haiphong is Vietnam\'s third-largest city and the country\'s most important seaport.', 'The city\'s Cat Ba Island contains Vietnam\'s largest national park and is a UNESCO Biosphere Reserve.', 'Haiphong was founded as a French colonial port in 1888 and still retains many French-era buildings.', 'During the Vietnam War, Haiphong harbor was heavily mined by U.S. forces in Operation Pocket Money (1972).', 'The city is famous for banh mi Haiphong, a beloved local variation of the Vietnamese baguette sandwich.'] },
+  'Cebu City':      { country: 'Philippines', facts: ['Cebu City is the oldest city in the Philippines, established by Miguel López de Legazpi in 1565.', 'Magellan\'s Cross was planted here in 1521 to mark Spain\'s first territorial claim in Asia.', 'Cebu is the birthplace of the lechon (whole roasted pig) tradition now iconic across the Philippines.', 'The city hosts Sinulog, one of the Philippines\' grandest festivals, every January.', 'Cebu is home to the largest Chinese temple in the Philippines, the Taoist Temple, built in 1972.'] },
+  'Auckland':       { country: 'New Zealand', facts: ['Auckland is built on a field of 53 volcanoes, making it one of the world\'s most volcanically active cities.', 'The city has more boats per capita than almost anywhere else in the world — hence "City of Sails."', 'Auckland straddles two harbours: the Waitematā on the Pacific side and the Manukau on the Tasman side.', 'The Sky Tower, at 328m, is the tallest freestanding structure in the Southern Hemisphere.', 'Auckland is home to the world\'s largest urban Polynesian population.'] },
+  'Gwangju':        { country: 'South Korea', facts: ['Gwangju is South Korea\'s designated cultural capital and home to the renowned Gwangju Biennale.', 'The May 18th Uprising of 1980 is a defining moment in South Korean democracy — now a UNESCO Memory of the World.', 'Gwangju is considered the culinary capital of Korea, famous for kimchi and ganjang gejang (raw crab).', 'The city hosts the Gwangju Design Biennale, one of the world\'s largest design events, every two years.', 'Gwangju means "State of Light" in Korean — the city embraces this through major annual light festivals.'] },
+  'Hanoi':          { country: 'Vietnam', facts: ['Hanoi has been the capital of Vietnam for over 1,000 years, making it one of Asia\'s oldest capitals.', 'The Old Quarter has 36 streets, each traditionally named after the guild or craft practiced there.', 'Hanoi\'s Hoan Kiem Lake is home to one of the world\'s rarest turtles — the giant softshell turtle.', 'The "Hanoi Hilton" (Hỏa Lò Prison) was a French colonial jail that later housed American POWs.', 'Egg coffee (cà phê trứng) was invented in Hanoi in 1946 as a wartime substitute for scarce milk.'] },
+  'Kyoto':          { country: 'Japan', facts: ['Kyoto was Japan\'s imperial capital for over 1,000 years, from 794 to 1869 AD.', 'The city has 17 UNESCO World Heritage Sites — more than almost any other city in the world.', 'Kyoto was removed from the atomic bomb target list in WWII reportedly due to its cultural importance.', 'Kyoto\'s geisha districts (hanamachi) are among the last places where traditional geisha culture survives.', 'Fushimi Inari Shrine has over 10,000 torii gates winding through the forested hillside behind it.'] },
+  'Dili':           { country: 'Timor-Leste', facts: ['Dili is the capital of Timor-Leste, one of the world\'s youngest nations, which gained independence in 2002.', 'The Cristo Rei of Dili is a 27-metre statue of Jesus standing on a globe overlooking the Timor Sea.', 'Timor-Leste is one of only two Christian-majority nations in Southeast Asia, alongside the Philippines.', 'The waters off Dili are considered some of the most pristine scuba diving locations in the world.', 'Dili\'s name derives from the Portuguese colonial era — it was the capital of Portuguese Timor from 1769.'] },
+  'Bangkok':        { country: 'Thailand', facts: ['Bangkok\'s full ceremonial name is 168 characters long — the longest official place name in the world.', 'The city has over 400 Buddhist temples (wats) — more than any other city on Earth.', 'Bangkok is the world\'s most visited city, receiving over 22 million international tourists annually.', 'Tuk-tuks, the iconic three-wheeled taxis, were introduced to Bangkok in the 1960s from Japan.', 'Parts of Bangkok sink by up to 3cm per year due to groundwater extraction — the city sits just 1.5m above sea level.'] },
+  'Novosibirsk':    { country: 'Russia', facts: ['Novosibirsk is Russia\'s third-largest city and the largest city in all of Siberia.', 'The city was founded in 1893 as a railway bridge crossing point on the Trans-Siberian Railway.', 'Akademgorodok, a "science city" suburb, was built in 1957 and once housed over 65 research institutes.', 'Novosibirsk Opera and Ballet Theatre is the largest opera house in Russia — bigger than the Bolshoi in Moscow.', 'The city experiences temperature swings from −40°C in winter to +35°C in summer — a 75°C annual range.'] },
+  'Monaco':         { country: 'Monaco', facts: ['Monaco is the world\'s second-smallest country at just 2.02 km², yet the world\'s most densely populated nation.', 'About 32% of Monaco\'s residents are millionaires — the highest wealth concentration anywhere on Earth.', 'Monaco has no income tax, which has attracted wealthy residents since the 19th century.', 'The Monaco Grand Prix has been held on the same street circuit since 1929, making it Formula 1\'s most storied race.', 'Despite its tiny size, Monaco has its own orchestra, ballet company, and philharmonic.'] },
+  'Bordeaux':       { country: 'France', facts: ['Bordeaux is the wine capital of the world, producing some of the most sought-after wines on the planet.', 'The city\'s historic center is France\'s largest urban UNESCO World Heritage area.', 'The Miroir d\'Eau (water mirror) is the world\'s largest reflecting pool, covering 3,450 m² of pavement.', 'Bordeaux has more 18th-century buildings than any other French city except Paris.', 'The Port of the Moon — the arc-shaped bend of the Garonne River cradling Bordeaux — gives the city its UNESCO name.'] },
+  'Wroclaw':        { country: 'Poland', facts: ['Wroclaw has over 300 bridges — more bridges per square kilometer than Venice or Amsterdam.', 'The city has changed hands 6 times between nations: Bohemia, Austria, Prussia, Germany, and Poland.', 'Over 300 bronze dwarf statues are hidden around the city, started as a political protest movement in 2001.', 'Wroclaw was a joint host of UEFA Euro 2012 alongside Warsaw, Gdańsk, and Poznań.', 'Wroclaw\'s Market Square (Rynek) is one of the largest medieval squares in Europe at 213 × 178 metres.'] },
+  'Zagreb':         { country: 'Croatia', facts: ['Zagreb is home to the world\'s only Museum of Broken Relationships — featuring mementos from ended romances.', 'The medieval Upper Town (Gornji Grad) has been continuously inhabited for over 900 years.', 'Zagreb\'s Cathedral is the tallest building in Croatia at 105 metres and a major Catholic pilgrimage site.', 'Zagreb\'s tram network, running since 1891, is one of the oldest still in operation in the world.', 'The funicular connecting the Lower and Upper Towns, built in 1890, is one of the shortest in the world at 66m.'] },
+  'Orkney':         { country: 'United Kingdom', facts: ['Orkney is a Scottish archipelago of 70 islands, of which only 20 are permanently inhabited.', 'The Neolithic village of Skara Brae on Orkney is older than Stonehenge and the Egyptian pyramids.', 'Scapa Flow in Orkney is where the German High Seas Fleet was scuttled in 1919 — the largest single-day loss of shipping in history.', 'Orkney generates more than 100% of its electricity needs from renewable energy sources.', 'The Standing Stones of Stenness on Orkney are among the oldest standing stone monuments in the British Isles.'] },
+  'Seville':        { country: 'Spain', facts: ['Seville\'s Alcázar is the oldest royal palace still in use in Europe, with parts dating back to the 10th century.', 'Christopher Columbus is buried in Seville Cathedral — the world\'s largest Gothic building.', 'Seville is the hottest city in continental Europe, regularly reaching 40°C+ in summer.', 'Seville was the first city in Europe to have a permanent opera house, opened in 1731.', 'Both the fictional Barber of Seville (Rossini) and Don Juan are set in Seville.'] },
+  'Ponta Delgada':  { country: 'Portugal', facts: ['Ponta Delgada is the capital of the Azores, a Portuguese archipelago sitting in the mid-Atlantic Ocean.', 'The city\'s iconic streets are paved with black and white basalt cobblestones made from local volcanic rock.', 'The Azores straddle three tectonic plates — the Eurasian, African, and North American — a geological rarity.', 'Sete Cidades, a nearby volcanic caldera, contains two lakes of visibly different colors side by side.', 'The city hosts the Festas do Senhor Santo Cristo dos Milagres, the largest popular religious festival in the Azores.'] },
+  'Quezon City':    { country: 'Philippines', facts: ['Quezon City was the capital of the Philippines from 1948 to 1976, before Manila reclaimed the title.', 'The city is named after Manuel L. Quezon, the first president of the Philippine Commonwealth.', 'Quezon City is the most populous city in the Philippines with nearly 3 million residents.', 'The Quezon Memorial Circle is a 66-hectare national park and shrine dedicated to President Quezon.', 'The University of the Philippines\' main Diliman campus — the country\'s premier university — is located here.'] },
+  'Adelaide':       { country: 'Australia', facts: ['Adelaide is the only Australian capital city that was entirely free-settled — no convicts were ever transported here.', 'The city has more restaurants and cafés per capita than New York City.', 'Adelaide hosts WOMADelaide, one of the world\'s leading world music and dance festivals, every March.', 'Adelaide\'s street grid was designed by Colonel William Light in 1836 and has never needed significant modification.', 'The city is surrounded by world-class wine regions — Barossa Valley, McLaren Vale, and the Adelaide Hills are all within an hour.'] },
+  'Shanghai':       { country: 'China', facts: ['Shanghai\'s skyline includes over 3,000 skyscrapers — more high-rises than New York City.', 'The Shanghai Maglev, launched in 2004, travels at 431 km/h — the fastest commercial train in the world.', 'Shanghai is the world\'s busiest container port, handling over 45 million containers annually.', 'The Bund waterfront features 52 buildings representing over 12 different architectural styles.', 'Shanghai\'s 1920s-30s art deco heritage is so celebrated the city is sometimes called the "Paris of the East."'] },
+  'Sendai':         { country: 'Japan', facts: ['Sendai is known as the "City of Trees" for its zelkova tree-lined boulevards, especially Jozenji-dori Avenue.', 'The city is home to Date Masamune, the "One-Eyed Dragon" — one of feudal Japan\'s most powerful warlords.', 'Sendai Tanabata, held every August, is one of Japan\'s most celebrated festivals with millions of visitors.', 'Sendai was severely impacted by the 2011 Tōhoku earthquake and tsunami, but rebuilt as a model of disaster resilience.', 'Gyutan (grilled beef tongue) was invented by a Sendai restaurant owner in 1948 and is now the city\'s signature dish.'] },
+  'Ashgabat':       { country: 'Turkmenistan', facts: ['Ashgabat holds the Guinness World Record for the highest density of white marble-clad buildings in the world.', 'The city was almost completely destroyed by a catastrophic earthquake in 1948 that killed over 110,000 people.', 'Ashgabat\'s Neutrality Arch was originally topped with a rotating golden statue of President Niyazov that always faced the sun.', 'The city has one of the world\'s largest carpet museums, housing the world\'s biggest hand-knotted carpet.', 'Ashgabat means "City of Love" in Persian — from "ashk" (love) and "abad" (city/settlement).'] },
+  'Milan':          { country: 'Italy', facts: ['Milan is the fashion capital of the world, home to the bi-annual Fashion Week that sets global trends.', 'Leonardo da Vinci\'s "The Last Supper" is painted directly on a church wall in Milan — it\'s not a canvas painting.', 'Milan\'s Duomo Cathedral took nearly 600 years to complete — construction began in 1386 and finished in 1965.', 'La Scala opera house, opened in 1778, is considered the most prestigious opera venue in the world.', 'Galleria Vittorio Emanuele II, opened in 1877, is one of the world\'s oldest shopping malls.'] },
+  'Trondheim':      { country: 'Norway', facts: ['Trondheim was Norway\'s capital for centuries and remains the country\'s traditional coronation city.', 'The Nidaros Cathedral is the northernmost medieval cathedral in the world and a major pilgrimage destination.', 'Trondheim is home to NTNU, Norway\'s largest university and a leading European science and technology hub.', 'The city has the world\'s only bicycle lift (Trampe/CycloCable), installed in 1993 to help cyclists up a steep hill.', 'Trondheim hosted the 1997 World Cycling Championships and is renowned as one of Scandinavia\'s best cycling cities.'] },
+};
+
+const factIndices = {};
+
 function showRoute(targetEl) {
   if (targetEl.dataset.name === 'PD | Global Design') return;
   clearRoute();
@@ -866,6 +936,23 @@ function showRoute(targetEl) {
   const flag = COUNTRY_EMOJI[roomName] || '📍';
   rcDest.textContent = flag + ' ' + roomName;
   rcTo.textContent = flag + ' ' + roomName;
+
+  // Country + fact
+  const cityData = CITY_DATA[roomName];
+  if (cityData) {
+    rcCountryText.textContent = cityData.country;
+    rcCountry.style.display = 'flex';
+    if (factIndices[roomName] === undefined) factIndices[roomName] = 0;
+    rcFactText.textContent = cityData.facts[factIndices[roomName]];
+    updateFactDots(roomName);
+    rcDivider.style.display = 'block';
+    rcFactBox.style.display = 'block';
+  } else {
+    rcCountry.style.display = 'none';
+    rcDivider.style.display = 'none';
+    rcFactBox.style.display = 'none';
+  }
+
   routeCard.classList.add('show');
 }
 
@@ -878,6 +965,59 @@ allRooms.forEach(el => {
 });
 
 rcClose.addEventListener('click', clearRoute);
+
+function updateFactDots(name) {
+  const cityData = CITY_DATA[name];
+  if (!cityData) return;
+  const total = cityData.facts.length;
+  const current = factIndices[name] || 0;
+  rcFactDots.innerHTML = '';
+  for (let i = 0; i < total; i++) {
+    const dot = document.createElement('span');
+    dot.className = 'fact-dot' + (i === current ? ' active' : '');
+    rcFactDots.appendChild(dot);
+  }
+}
+
+function goToFact(name, direction) {
+  const cityData = CITY_DATA[name];
+  if (!cityData) return;
+  const total = cityData.facts.length;
+  factIndices[name] = ((factIndices[name] || 0) + direction + total) % total;
+  const anim = direction > 0 ? 'factSlideLeft 0.25s ease' : 'factSlideRight 0.25s ease';
+  rcFactText.style.animation = 'none';
+  rcFactText.offsetHeight;
+  rcFactText.style.animation = anim;
+  rcFactText.textContent = cityData.facts[factIndices[name]];
+  updateFactDots(name);
+}
+
+// Touch swipe
+let swipeStartX = 0, swipeStartY = 0;
+rcFactBox.addEventListener('touchstart', e => {
+  swipeStartX = e.touches[0].clientX;
+  swipeStartY = e.touches[0].clientY;
+}, { passive: true });
+rcFactBox.addEventListener('touchend', e => {
+  if (!activeTarget) return;
+  const dx = e.changedTouches[0].clientX - swipeStartX;
+  const dy = e.changedTouches[0].clientY - swipeStartY;
+  if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 28) {
+    goToFact(activeTarget.dataset.name, dx < 0 ? 1 : -1);
+  }
+}, { passive: true });
+
+// Mouse drag
+let dragStartX = 0, factDragging = false;
+rcFactBox.addEventListener('mousedown', e => { dragStartX = e.clientX; factDragging = true; e.stopPropagation(); });
+rcFactBox.addEventListener('mouseup', e => {
+  if (!factDragging || !activeTarget) return;
+  factDragging = false;
+  const dx = e.clientX - dragStartX;
+  if (Math.abs(dx) > 28) goToFact(activeTarget.dataset.name, dx < 0 ? 1 : -1);
+  e.stopPropagation();
+});
+rcFactBox.addEventListener('mouseleave', () => { factDragging = false; });
 container.addEventListener('click', e => { if (!e.target.closest('[data-name]') && activeTarget) clearRoute(); });
 
 // ========== SEARCH AUTOCOMPLETE ==========
@@ -885,10 +1025,21 @@ const searchInput = document.getElementById('search');
 const dropdown = document.getElementById('search-dropdown');
 let activeIdx = -1;
 
-// Build room list (exclude PD Global Design)
+function positionDropdown() {
+  const bar = document.querySelector('.top-bar');
+  const rect = bar.getBoundingClientRect();
+  dropdown.style.top = (rect.bottom + 6) + 'px';
+  dropdown.style.width = rect.width + 'px';
+  dropdown.style.left = rect.left + 'px';
+  dropdown.style.transform = 'none';
+}
+
+// Build room list (exclude non-meeting-room types)
+const SEARCH_EXCLUDED_TYPES = ['Phone Booth', 'Restroom', 'Amenity', 'Wellness', 'Lounge Area'];
 const roomList = [];
 allRooms.forEach(el => {
   if (el.dataset.name === 'PD | Global Design') return;
+  if (SEARCH_EXCLUDED_TYPES.some(t => el.dataset.type.includes(t))) return;
   roomList.push({ name: el.dataset.name, type: el.dataset.type, el });
 });
 
@@ -961,7 +1112,7 @@ function updateDropdown() {
 
   if (results.length === 0) {
     dropdown.innerHTML = '<div class="search-empty">No rooms found</div>';
-    dropdown.classList.add('open');
+    positionDropdown(); dropdown.classList.add('open');
     activeIdx = -1;
     clearRoute();
     return;
@@ -969,8 +1120,10 @@ function updateDropdown() {
 
   dropdown.innerHTML = results.map((r, i) => {
     const icon = getIcon(r.type);
+    const flag = COUNTRY_EMOJI[r.name];
+    const displayEmoji = flag || icon.emoji;
     return `<div class="search-item${i === 0 ? ' active' : ''}" data-idx="${i}">
-      <div class="search-item-icon ${icon.cls}">${icon.emoji}</div>
+      <div class="search-item-icon ${icon.cls}">${displayEmoji}</div>
       <div class="search-item-info">
         <div class="search-item-name">${highlightMatch(r.name, q)}</div>
         <div class="search-item-type">${r.type}</div>
@@ -979,7 +1132,7 @@ function updateDropdown() {
     </div>`;
   }).join('');
 
-  dropdown.classList.add('open');
+  positionDropdown(); dropdown.classList.add('open');
   activeIdx = 0;
 
   // Attach click handlers
