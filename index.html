@@ -956,7 +956,9 @@ function showRoute(targetEl) {
   routeCard.classList.add('show');
 }
 
+const NAV_EXCLUDED_TYPES = ['Phone Booth', 'Restroom', 'Amenity', 'Wellness', 'Lounge Area'];
 allRooms.forEach(el => {
+  if (NAV_EXCLUDED_TYPES.some(t => (el.dataset.type || '').includes(t))) return;
   el.addEventListener('click', e => {
     e.stopPropagation();
     if (activeTarget === el) { clearRoute(); return; }
