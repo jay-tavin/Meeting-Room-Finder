@@ -1650,8 +1650,8 @@ function animatePanToRoute(destX, destY, pathLen, routePoints) {
   function ease(t) { return t * t * (3 - 2 * t); }
 
   const startScale = scale;
-  const zoomScale  = Math.min(startScale * 2.5, 2.2);
-  const panScale   = Math.min(startScale * 1.5, 1.35);
+  const zoomScale  = Math.min(startScale * 1.875, 1.65);
+  const panScale   = Math.min(startScale * 1.125, 1.0125);
 
   const dists = [0];
   for (let i = 1; i < routePoints.length; i++) {
