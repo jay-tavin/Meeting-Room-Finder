@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Office Floor Plan</title>
 <style>
+  /* Responsive: mobile-first, desktop overrides at min-width: 768px */
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   :root {
@@ -24,6 +26,9 @@
     --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
     --shadow-lg: 0 8px 30px rgba(0,0,0,0.12);
     --radius: 10px;
+
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   body {
@@ -31,122 +36,271 @@
     background: var(--bg);
     overflow: hidden;
     height: 100vh;
+    height: 100dvh;
     width: 100vw;
     -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+    touch-action: none;
   }
 
   #app { width: 100%; height: 100%; position: relative; overflow: hidden; }
 
+  /* ── Search bar ── */
+  .search-wrap {
+    position: fixed;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    padding-top: calc(var(--safe-top) + 12px);
+    padding-bottom: 12px;
+    padding-left: 16px;
+    padding-right: 16px;
+    width: 100%;
+    max-width: 540px;
+    pointer-events: none;
+  }
+
   .top-bar {
-    position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 100;
     display: flex; align-items: center; gap: 8px;
-    background: rgba(255,255,255,0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-    border-radius: 28px; padding: 8px 20px;
+    background: rgba(255,255,255,0.88);
+    backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+    border-radius: 28px; padding: 10px 18px;
     box-shadow: var(--shadow-lg); border: 1px solid rgba(0,0,0,0.06);
+    pointer-events: auto;
+    width: 100%;
   }
   .top-bar svg { width: 18px; height: 18px; color: var(--text-secondary); flex-shrink: 0; }
   .top-bar input {
-    border: none; background: none; font-size: 15px; font-family: inherit;
-    color: var(--text-primary); outline: none; width: 220px; font-weight: 400;
+    border: none; background: none; font-size: 16px; font-family: inherit;
+    color: var(--text-primary); outline: none; flex: 1; font-weight: 400;
+    min-width: 0;
   }
   .top-bar input::placeholder { color: var(--text-muted); }
 
+  @media (min-width: 768px) {
+    .search-wrap {
+      padding-top: 16px;
+      max-width: 480px;
+    }
+    .top-bar {
+      padding: 8px 20px;
+    }
+    .top-bar input {
+      font-size: 15px;
+    }
+  }
+
   .search-dropdown {
-    position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
-    width: 300px; margin-top: 0;
-    background: rgba(255,255,255,0.95); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+    position: fixed;
+    top: 0; /* set dynamically */
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100vw - 32px);
+    max-width: 508px;
+    background: rgba(255,255,255,0.96); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
     border-radius: 16px; overflow: hidden;
     box-shadow: 0 12px 40px rgba(0,0,0,0.15); border: 1px solid rgba(0,0,0,0.06);
-    display: none; max-height: 320px; overflow-y: auto; z-index: 101;
+    display: none; max-height: 50vh; overflow-y: auto; z-index: 101;
   }
   .search-dropdown.open { display: block; }
   .search-dropdown::-webkit-scrollbar { width: 4px; }
   .search-dropdown::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 2px; }
 
+  @media (min-width: 768px) {
+    .search-dropdown {
+      width: 300px;
+      max-height: 320px;
+    }
+  }
+
   .search-item {
     display: flex; align-items: center; gap: 12px;
-    padding: 11px 16px; cursor: pointer; transition: background 0.12s;
+    padding: 13px 16px; cursor: pointer; transition: background 0.12s;
     border-bottom: 1px solid rgba(0,0,0,0.04);
   }
   .search-item:last-child { border-bottom: none; }
   .search-item:hover, .search-item.active { background: rgba(0,122,255,0.06); }
   .search-item-icon {
-    width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
-    font-size: 14px; flex-shrink: 0;
+    width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    font-size: 15px; flex-shrink: 0;
   }
   .search-item-icon.meeting { background: rgba(0,0,0,0.04); }
   .search-item-icon.amenity { background: rgba(52,199,89,0.1); }
   .search-item-icon.restroom { background: rgba(88,86,214,0.08); }
   .search-item-icon.lounge { background: rgba(255,159,10,0.1); }
   .search-item-info { flex: 1; min-width: 0; }
-  .search-item-name { font-size: 14px; font-weight: 500; color: var(--text-primary); }
+  .search-item-name { font-size: 15px; font-weight: 500; color: var(--text-primary); }
   .search-item-name mark { background: rgba(0,122,255,0.15); color: var(--text-primary); border-radius: 2px; padding: 0 1px; }
-  .search-item-type { font-size: 11px; color: var(--text-secondary); margin-top: 1px; }
+  .search-item-type { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
   .search-item-arrow { color: var(--text-muted); font-size: 14px; flex-shrink: 0; }
-  .search-empty { padding: 20px 16px; text-align: center; color: var(--text-muted); font-size: 13px; }
+  .search-empty { padding: 24px 16px; text-align: center; color: var(--text-muted); font-size: 14px; }
 
-  .zoom-divider { height: 1px; background: rgba(0,0,0,0.08); }
-
-  .rotate-controls {
-    position: fixed; bottom: 24px; right: 24px; z-index: 100;
-    display: flex; align-items: center; gap: 0;
-    background: rgba(255,255,255,0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-    border-radius: 12px; overflow: hidden;
-    box-shadow: var(--shadow-lg); border: 1px solid rgba(0,0,0,0.06);
+  @media (min-width: 768px) {
+    .search-item { padding: 11px 16px; }
+    .search-item-icon { width: 32px; height: 32px; font-size: 14px; }
+    .search-item-name { font-size: 14px; }
+    .search-item-type { font-size: 11px; margin-top: 1px; }
+    .search-empty { padding: 20px 16px; font-size: 13px; }
   }
-  .rotate-btn {
-    width: 44px; height: 44px; border: none; background: transparent; cursor: pointer;
+
+  /* ── Floating map controls ── */
+  .float-zoom {
+    position: fixed;
+    right: 16px;
+    bottom: calc(var(--safe-bottom) + 16px);
+    z-index: 100;
+    display: flex; flex-direction: column;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-radius: 14px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.06);
+    border: 1px solid rgba(0,0,0,0.06);
+    overflow: hidden;
+  }
+
+  /* Compass + rotate pill sit above the zoom stack */
+  .float-row {
+    position: fixed;
+    right: 16px;
+    bottom: calc(var(--safe-bottom) + 128px);
+    z-index: 100;
+    display: flex; flex-direction: column; gap: 8px;
+    align-items: flex-end;
+  }
+
+  .float-badge {
+    position: fixed;
+    left: 16px;
+    bottom: calc(var(--safe-bottom) + 16px);
+    z-index: 100;
+    display: flex; align-items: center; gap: 7px;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-radius: 20px; padding: 8px 14px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.06);
+    border: 1px solid rgba(0,0,0,0.06);
+    font-size: 13px; color: var(--text-secondary); font-weight: 600;
+  }
+  .float-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+
+  @media (min-width: 768px) {
+    .float-badge {
+      left: 24px;
+      bottom: 24px;
+      border-radius: 12px;
+      padding: 10px 16px;
+    }
+    .float-zoom {
+      right: 24px;
+      bottom: 24px;
+    }
+    .float-row {
+      right: 24px;
+      bottom: 128px;
+    }
+  }
+
+  .bar-btn {
+    width: 46px; height: 46px; border: none; background: transparent; cursor: pointer;
     color: var(--text-primary); display: flex; align-items: center; justify-content: center;
-    transition: background 0.15s;
+    transition: background 0.15s; flex-shrink: 0;
   }
-  .rotate-btn:hover { background: rgba(0,0,0,0.04); }
-  .rotate-btn:active { background: rgba(0,0,0,0.08); }
-  .rotate-divider { width: 1px; height: 28px; background: rgba(0,0,0,0.08); }
+  .bar-btn:hover { background: rgba(0,0,0,0.04); }
+  .bar-btn:active { background: rgba(0,0,0,0.08); }
+  .bar-btn svg { width: 20px; height: 20px; }
+  .bar-btn.float-solo {
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-radius: 14px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.06);
+    border: 1px solid rgba(0,0,0,0.06);
+  }
+  .bar-btn.float-solo:hover { background: rgba(255,255,255,0.98); }
+
+  @media (min-width: 768px) {
+    .bar-btn { width: 44px; height: 44px; }
+  }
+
+  .bar-divider { width: 100%; height: 1px; background: rgba(0,0,0,0.08); flex-shrink: 0; }
+
   .rotate-label {
-    padding: 0 10px; font-size: 12px; font-weight: 600; color: var(--text-secondary);
-    min-width: 36px; text-align: center; cursor: pointer; height: 44px;
+    padding: 0 6px; font-size: 12px; font-weight: 600; color: var(--text-secondary);
+    min-width: 36px; text-align: center; cursor: pointer; height: 46px;
     display: flex; align-items: center; justify-content: center;
-    transition: background 0.15s;
+    transition: background 0.15s; flex-shrink: 0;
   }
   .rotate-label:hover { background: rgba(0,0,0,0.04); }
 
-  /* Counter-rotate text elements so they stay upright */
+  @media (min-width: 768px) {
+    .rotate-label { height: 44px; padding: 0 10px; }
+  }
+
+  /* Rotate pill */
+  .rotate-pill {
+    display: flex; align-items: center;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-radius: 14px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.06);
+    border: 1px solid rgba(0,0,0,0.06);
+    overflow: hidden;
+  }
+  .rotate-pill .bar-divider { width: 1px; height: 24px; flex-shrink: 0; }
+
+  /* Counter-rotate text elements */
   .counter-rotate {
     transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  .floor-badge {
-    position: fixed; bottom: 24px; left: 24px; z-index: 100;
-    background: rgba(255,255,255,0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-    border-radius: 12px; padding: 10px 16px;
-    box-shadow: var(--shadow-lg); border: 1px solid rgba(0,0,0,0.06);
-    font-size: 13px; color: var(--text-secondary); font-weight: 500;
-    display: flex; align-items: center; gap: 8px;
-  }
-  .floor-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
-
-  /* Route card */
+  /* ── Route card (bottom sheet) ── */
   .route-card {
-    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(120px);
-    z-index: 100; background: rgba(255,255,255,0.92); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
-    border-radius: 18px; padding: 16px 22px; min-width: 300px; max-width: 480px; width: calc(100vw - 40px);
+    position: fixed;
+    bottom: calc(var(--safe-bottom) + 12px);
+    left: 12px;
+    width: calc(100vw - 24px);
+    max-width: 540px;
+    z-index: 99;
+    background: rgba(255,255,255,0.93); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+    border-radius: 18px; padding: 14px 16px;
     box-shadow: 0 12px 40px rgba(0,0,0,0.15); border: 1px solid rgba(0,0,0,0.06);
     transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s;
-    opacity: 0; pointer-events: none;
+    transform: translateY(150px); opacity: 0; pointer-events: none;
   }
-  .route-card.show { transform: translateX(-50%) translateY(0); opacity: 1; pointer-events: auto; }
+  .route-card.show { transform: translateY(0); opacity: 1; pointer-events: auto; }
+
+  @media (min-width: 580px) {
+    .route-card { left: 50%; transform: translateX(-50%) translateY(150px); width: calc(100vw - 32px); }
+    .route-card.show { transform: translateX(-50%) translateY(0); }
+  }
+
+  @media (min-width: 768px) {
+    .route-card {
+      bottom: 80px;
+      padding: 16px 22px;
+      min-width: 300px;
+      max-width: 480px;
+    }
+    .route-card.show { transform: translateX(-50%) translateY(0); }
+  }
+
   .route-card-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   .route-card-info { flex: 1; }
   .route-card-dest { font-size: 17px; font-weight: 600; color: var(--text-primary); }
   .route-card-meta { font-size: 12px; color: var(--text-secondary); margin-top: 3px; display: flex; align-items: center; gap: 6px; }
   .route-card-meta svg { width: 14px; height: 14px; }
   .route-card-close {
-    width: 30px; height: 30px; border-radius: 50%; border: none; cursor: pointer;
+    width: 36px; height: 36px; border-radius: 50%; border: none; cursor: pointer;
     background: rgba(0,0,0,0.06); color: var(--text-secondary); font-size: 16px;
     display: flex; align-items: center; justify-content: center; transition: background 0.15s; flex-shrink: 0;
   }
   .route-card-close:hover { background: rgba(0,0,0,0.1); }
-  .route-card-bar { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
+
+  @media (min-width: 768px) {
+    .route-card-close { width: 30px; height: 30px; }
+  }
+
+  .route-card-bar { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
   .route-card-from, .route-card-to { font-size: 11px; font-weight: 500; padding: 5px 10px; border-radius: 8px; white-space: nowrap; }
   .route-card-from { background: rgba(0,122,255,0.1); color: var(--blue); }
   .route-card-to { background: rgba(52,199,89,0.1); color: #2d8a47; }
@@ -156,7 +310,13 @@
   .route-card-line-seg { flex: 1; height: 2px; background: linear-gradient(90deg, var(--blue), var(--green)); border-radius: 1px; }
   .route-card-country { font-size: 11px; color: var(--text-secondary); margin-top: 3px; display: flex; align-items: center; gap: 3px; }
   .route-card-country-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--text-muted); flex-shrink: 0; }
-  .route-card-divider { height: 1px; background: rgba(0,0,0,0.06); margin: 12px 0 10px; }
+  .route-card-divider { height: 1px; background: rgba(0,0,0,0.06); margin: 11px 0 9px; }
+
+  @media (min-width: 768px) {
+    .route-card-bar { margin-top: 14px; }
+    .route-card-divider { margin: 12px 0 10px; }
+  }
+
   .route-card-fact {
     background: linear-gradient(135deg, rgba(255,159,10,0.07) 0%, rgba(255,204,0,0.05) 100%);
     border-radius: 12px; padding: 11px 13px;
@@ -176,7 +336,8 @@
   .fact-dot { width: 5px; height: 5px; border-radius: 50%; background: rgba(192,120,0,0.2); transition: all 0.25s ease; flex-shrink: 0; }
   .fact-dot.active { width: 14px; border-radius: 3px; background: #c07800; }
 
-  #map-container { width: 100%; height: 100%; cursor: grab; position: relative; }
+  /* ── Map ── */
+  #map-container { width: 100%; height: 100%; cursor: grab; position: relative; touch-action: none; }
   #map-container:active { cursor: grabbing; }
   #map-world { position: absolute; transform-origin: 0 0; transition: transform 0.08s ease-out; }
 
@@ -254,9 +415,7 @@
     position: absolute; z-index: 25; pointer-events: none; transform: translate(-50%, -100%);
     display: flex; flex-direction: column; align-items: center;
   }
-  .map-marker-pin {
-    width: 32px; height: 42px; position: relative;
-  }
+  .map-marker-pin { width: 32px; height: 42px; position: relative; }
   .map-marker-pin svg { width: 100%; height: 100%; }
 
   .pulse-ring {
@@ -322,42 +481,112 @@
   .tooltip.show { opacity: 1; transform: translateY(0); }
   .tooltip-name { font-size: 14px; font-weight: 600; color: var(--text-primary); }
   .tooltip-type { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+
+  /* ── Intro / landing screen ── */
+  #intro-screen {
+    position: fixed; inset: 0; z-index: 500;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: flex-start;
+    padding: calc(var(--safe-top) + 80px) 28px 40px;
+    background: linear-gradient(170deg, #f5f3f0 0%, #e8e3dc 100%);
+    transition: opacity 0.55s cubic-bezier(0.4, 0, 0.6, 1),
+                transform 0.55s cubic-bezier(0.4, 0, 0.6, 1);
+  }
+  #intro-screen.leaving {
+    opacity: 0; transform: scale(1.05); pointer-events: none;
+  }
+  .intro-eyebrow {
+    display: flex; align-items: center; justify-content: center; gap: 9px;
+    font-size: 13px; font-weight: 600; color: var(--text-secondary);
+    letter-spacing: -0.01em; margin-bottom: 20px;
+    width: 100%; max-width: 400px;
+  }
+  .intro-eyebrow-logo { width: 28px; height: 28px; flex-shrink: 0; }
+  .intro-title {
+    font-size: 40px; font-weight: 700; color: var(--text-primary);
+    letter-spacing: -0.035em; line-height: 1.08; margin-bottom: 40px;
+    width: 100%; max-width: 400px; text-align: center;
+  }
+  .intro-search-card {
+    width: 100%; max-width: 400px;
+    background: rgba(255,255,255,0.96);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-radius: 22px;
+    box-shadow: 0 12px 48px rgba(0,0,0,0.13), 0 2px 8px rgba(0,0,0,0.06);
+    border: 1px solid rgba(0,0,0,0.06); overflow: hidden;
+  }
+  .intro-search-row {
+    display: flex; align-items: center; gap: 12px; padding: 18px 20px;
+  }
+  .intro-search-row svg { width: 20px; height: 20px; color: var(--text-muted); flex-shrink: 0; }
+  .intro-search-row input {
+    border: none; background: none; font-size: 17px; font-family: inherit;
+    color: var(--text-primary); outline: none; flex: 1; font-weight: 400;
+  }
+  .intro-search-row input::placeholder { color: var(--text-muted); }
+  .intro-dropdown {
+    display: none; border-top: 1px solid rgba(0,0,0,0.06);
+    max-height: 52vh; overflow-y: auto;
+  }
+  .intro-dropdown.open { display: block; }
+  .intro-dropdown::-webkit-scrollbar { width: 4px; }
+  .intro-dropdown::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 2px; }
+
+  /* ── Intro ticker ── */
+  .intro-ticker {
+    position: absolute;
+    bottom: calc(var(--safe-bottom) + 36px);
+    left: 0; width: 100%; overflow: hidden;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0%, black 8%, black 92%, transparent 100%);
+    mask-image: linear-gradient(90deg, transparent 0%, black 8%, black 92%, transparent 100%);
+    padding: 6px 0;
+    pointer-events: none;
+  }
+  .intro-ticker-track {
+    display: flex; gap: 10px;
+    width: max-content;
+    animation: tickerScroll 36s linear infinite;
+  }
+  .intro-ticker-track:hover { animation-play-state: paused; }
+  .intro-ticker-item {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.72);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(0,0,0,0.07);
+    border-radius: 100px; padding: 7px 14px 7px 10px;
+    white-space: nowrap; pointer-events: auto; cursor: pointer;
+    transition: background 0.15s, transform 0.15s;
+  }
+  .intro-ticker-item:hover { background: rgba(255,255,255,0.95); transform: scale(1.04); }
+  .intro-ticker-flag { font-size: 20px; line-height: 1; }
+  .intro-ticker-name { font-size: 13px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.01em; }
+  @keyframes tickerScroll {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
 </style>
 </head>
 <body>
 <div id="app">
-  <div style="position:fixed; top:16px; left:50%; transform:translateX(-50%); z-index:100; text-align:center; white-space:nowrap;">
-    <p style="font-size:22px; font-weight:700; color:var(--text-primary); margin-bottom:16px; letter-spacing:-0.03em;">What meeting room are you looking for?</p>
-  </div>
-  <div class="top-bar" style="top:54px;">
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
-    </svg>
-    <input type="text" id="search" placeholder="Search rooms…" autocomplete="off" />
+
+  <!-- Search bar -->
+  <div class="search-wrap">
+    <div class="top-bar">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
+      </svg>
+      <input type="text" id="search" placeholder="Search rooms…" autocomplete="off" />
+    </div>
   </div>
   <div class="search-dropdown" id="search-dropdown"></div>
 
-
-
-  <div class="rotate-controls">
-    <button class="rotate-btn" onclick="rotateMap(-90)" title="Rotate left">
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M7.11 8.53L5.7 7.11C4.8 8.27 4.24 9.61 4.07 11h2.02c.14-.87.49-1.72 1.02-2.47zM6.09 13H4.07c.17 1.39.72 2.73 1.62 3.89l1.41-1.42c-.52-.75-.87-1.59-1.01-2.47zm1.01 5.32c1.16.9 2.51 1.44 3.9 1.61V17.9c-.87-.15-1.71-.49-2.46-1.03L7.1 18.32zM13 4.07V1L8.45 5.55 13 10V6.09c2.84.48 5 2.94 5 5.91s-2.16 5.43-5 5.91v2.02c3.95-.49 7-3.85 7-7.93s-3.05-7.44-7-7.93z"/></svg>
-    </button>
-    <div class="rotate-divider"></div>
-    <div class="rotate-label" id="rotate-label">180°</div>
-    <div class="rotate-divider"></div>
-    <button class="rotate-btn" onclick="rotateMap(90)" title="Rotate right">
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M15.55 5.55L11 1v3.07C7.06 4.56 4 7.92 4 12s3.05 7.44 7 7.93v-2.02c-2.84-.48-5-2.94-5-5.91s2.16-5.43 5-5.91V10l4.55-4.45zM19.93 11c-.17-1.39-.72-2.73-1.62-3.89l-1.42 1.42c.54.75.88 1.6 1.02 2.47h2.02zm-1.62 5.89l-1.42-1.42c.54-.75.88-1.6 1.02-2.47h2.02c-.17 1.39-.72 2.73-1.62 3.89zm-3.42 2.04V20.9c1.39-.17 2.73-.72 3.89-1.62l-1.42-1.42c-.75.54-1.59.89-2.47 1.02z"/></svg>
-    </button>
-  </div>
-
-  <div class="floor-badge"><div class="dot"></div>SEA-07 · Floor Plan</div>
-
+  <!-- Tooltip (hover on desktop) -->
   <div class="tooltip" id="tooltip">
     <div class="tooltip-name" id="tooltip-name"></div>
     <div class="tooltip-type" id="tooltip-type"></div>
   </div>
 
+  <!-- Route Card -->
   <div class="route-card" id="route-card">
     <div class="route-card-header">
       <div class="route-card-info">
@@ -367,28 +596,29 @@
           <span id="rc-country-text"></span>
         </div>
       </div>
-      <button class="route-card-close" id="rc-close">✕</button>
+      <button class="route-card-close" id="rc-close">&#x2715;</button>
     </div>
     <div class="route-card-bar">
-      <span class="route-card-from">🏠 Your Desk</span>
+      <span class="route-card-from">&#x1F3E0; Your Desk</span>
       <div class="route-card-line">
         <div class="route-card-line-dot" style="background:var(--blue);"></div>
         <div class="route-card-line-seg"></div>
         <div class="route-card-line-dot" style="background:var(--green);"></div>
       </div>
-      <span class="route-card-to" id="rc-to">🏁 Room</span>
+      <span class="route-card-to" id="rc-to">&#x1F3C1; Room</span>
     </div>
     <div class="route-card-divider" id="rc-divider" style="display:none;"></div>
     <div class="route-card-fact" id="rc-fact-box" style="display:none;">
       <div class="route-card-fact-header">
-        <span class="route-card-fact-label">💡 Did you know?</span>
-        <span class="route-card-fact-hint">swipe ←→</span>
+        <span class="route-card-fact-label">&#x1F4A1; Did you know?</span>
+        <span class="route-card-fact-hint">swipe &#x2190;&#x2192;</span>
       </div>
       <div class="route-card-fact-text" id="rc-fact-text"></div>
       <div class="route-card-fact-dots" id="rc-fact-dots"></div>
     </div>
   </div>
 
+  <!-- Map -->
   <div id="map-container">
     <div id="map-world">
       <svg style="position:absolute; left:44px; top:22px; width:1444px; height:841px; overflow:visible; pointer-events:none;" viewBox="0 0 1444 841">
@@ -401,20 +631,14 @@
               fill="var(--floor)" stroke="var(--wall)" stroke-width="2" filter="url(#floor-shadow)"/>
       </svg>
 
-      <!-- Exterior emoji near cut corner (bottom-right unrotated = top-left visual at 180°) -->
-      <div class="counter-rotate" style="position:absolute; left:1487px; top:840px; font-size:44px; line-height:1; user-select:none; pointer-events:none;">🌅</div>
+      <div class="counter-rotate" style="position:absolute; left:1487px; top:840px; font-size:44px; line-height:1; user-select:none; pointer-events:none;">&#x1F305;</div>
 
-      <!-- Grey open area (left wing - between Quezon/Adelaide and Auckland/desks) -->
       <div style="position:absolute; left:300px; top:295px; width:270px; height:315px; background:#eae8e4; border-radius: 8px; border: 1px solid #ddd9d3;"></div>
-
-      <!-- Walkway above Guilin/Haiphong/Cebu City/Auckland -->
       <div style="position:absolute; left:152px; top:340px; width:418px; height:25px; background:var(--floor);"></div>
 
       <!-- Core -->
       <div class="core-area" style="left:640px; top:360px; width:570px; height:260px;"></div>
-      <!-- Elevator bank (centered within core, clean alignment) -->
       <div style="position:absolute; left:695px; top:365px; width:140px; height:250px; background:#d5d2cc; border-radius:5px; border:1px solid #c5c1ba;"></div>
-      <!-- Central lobby corridor -->
       <div style="position:absolute; left:735px; top:365px; width:60px; height:250px; background:#dedbd5; border-radius:3px;"></div>
       <!-- Left elevator shafts -->
       <div style="position:absolute; left:702px; top:375px; width:28px; height:28px; background:#c2beb6; border-radius:3px; border:1px solid #b5b0a8;"></div>
@@ -431,18 +655,18 @@
       <div style="position:absolute; left:800px; top:515px; width:28px; height:28px; background:#c2beb6; border-radius:3px; border:1px solid #b5b0a8;"></div>
       <div style="position:absolute; left:800px; top:550px; width:28px; height:28px; background:#c2beb6; border-radius:3px; border:1px solid #b5b0a8;"></div>
 
-      <!-- Phone Booths (1x4 column, flush against core grey rectangle) -->
+      <!-- Phone Booths -->
       <div class="phone-booth" data-name="Phone Booth 1" data-type="Phone Booth" style="left:1214px; top:370px; width:36px; height:36px;">
-        <span class="phone-booth-icon">📞</span>
+        <span class="phone-booth-icon">&#x1F4DE;</span>
       </div>
       <div class="phone-booth" data-name="Phone Booth 2" data-type="Phone Booth" style="left:1214px; top:410px; width:36px; height:36px;">
-        <span class="phone-booth-icon">📞</span>
+        <span class="phone-booth-icon">&#x1F4DE;</span>
       </div>
       <div class="phone-booth" data-name="Phone Booth 3" data-type="Phone Booth" style="left:1214px; top:450px; width:36px; height:36px;">
-        <span class="phone-booth-icon">📞</span>
+        <span class="phone-booth-icon">&#x1F4DE;</span>
       </div>
       <div class="phone-booth" data-name="Phone Booth 4" data-type="Phone Booth" style="left:1214px; top:490px; width:36px; height:36px;">
-        <span class="phone-booth-icon">📞</span>
+        <span class="phone-booth-icon">&#x1F4DE;</span>
       </div>
 
       <!-- SVG path layer -->
@@ -520,7 +744,7 @@
         <span class="room-label">Ponta Delgada</span>
       </div>
       <div class="room" data-name="Lounge" data-type="Lounge Area" style="left:360px; top:520px; width:120px; height:60px; background:rgba(255,159,10,0.05); border-color:rgba(255,159,10,0.2);">
-        <span class="room-icon">☕</span><span class="room-label" style="color:#b36b00;">Lounge</span>
+        <span class="room-icon">&#x2615;</span><span class="room-label" style="color:#b36b00;">Lounge</span>
       </div>
       <div class="room" data-name="Quezon City" data-type="Meeting Room" style="left:300px; top:610px; width:140px; height:60px;">
         <span class="room-label">Quezon City</span>
@@ -541,154 +765,361 @@
         <span class="room-label">Milan</span>
       </div>
       <div class="room" data-name="Trondheim" data-type="Design Room" style="left:1330px; top:650px; width:150px; height:60px; background:rgba(175,82,222,0.05); border-color:rgba(175,82,222,0.2);">
-        <span class="room-icon">🎨</span><span class="room-label" style="color:#8944b0;">Trondheim</span>
+        <span class="room-icon">&#x1F3A8;</span><span class="room-label" style="color:#8944b0;">Trondheim</span>
         <span class="room-sublabel">DESIGN ROOM</span>
       </div>
 
       <div class="amenity" data-name="Wellness Room" data-type="Wellness" style="left:1215px; top:302px; width:80px; height:55px;">
-        <span class="room-icon">🧘</span><span class="room-label">Wellness</span>
+        <span class="room-icon">&#x1F9D8;</span><span class="room-label">Wellness</span>
         <span class="room-sublabel" style="color:#2d8a47;">SEA-07</span>
       </div>
       <div class="amenity" data-name="Break Room" data-type="Amenity" style="left:604px; top:760px; width:80px; height:80px;">
-        <span class="room-icon">☕</span><span class="room-label">Break Room</span>
+        <span class="room-icon">&#x2615;</span><span class="room-label">Break Room</span>
       </div>
-      <div class="amenity" data-name="Café" data-type="Amenity" style="left:792px; top:725px; width:290px; height:120px;">
-        <span class="room-icon" style="font-size:20px;">☕</span><span class="room-label" style="font-size:13px;">Café</span>
+      <div class="amenity" data-name="Caf&#233;" data-type="Amenity" style="left:792px; top:725px; width:290px; height:120px;">
+        <span class="room-icon" style="font-size:20px;">&#x2615;</span><span class="room-label" style="font-size:13px;">Caf&#233;</span>
       </div>
 
       <div class="restroom" data-name="Men's Restroom" data-type="Restroom" style="left:490px; top:368px; width:80px; height:160px;">
-        <span class="room-icon">🚹</span><span class="room-label">Men</span>
+        <span class="room-icon">&#x1F6B9;</span><span class="room-label">Men</span>
       </div>
       <div class="restroom" data-name="Women's Restroom" data-type="Restroom" style="left:980px; top:435px; width:80px; height:180px;">
-        <span class="room-icon">🚺</span><span class="room-label">Women</span>
+        <span class="room-icon">&#x1F6BA;</span><span class="room-label">Women</span>
       </div>
       <div class="restroom" data-name="All Gender Restroom" data-type="Restroom" style="left:965px; top:625px; width:75px; height:45px;">
-        <span class="room-icon">🚻</span><span class="room-label">All Gender</span>
+        <span class="room-icon">&#x1F6BB;</span><span class="room-label">All Gender</span>
       </div>
       <div class="restroom" data-name="All Gender Restroom 2" data-type="Restroom" style="left:965px; top:675px; width:75px; height:45px;">
-        <span class="room-icon">🚻</span><span class="room-label">All Gender</span>
+        <span class="room-icon">&#x1F6BB;</span><span class="room-label">All Gender</span>
       </div>
 
-      <div class="team-area" data-name="PD | Global Design" data-type="Team Area · Your Location" style="left:1330px; top:360px; width:150px; height:240px;">
-        <span class="room-icon" style="font-size:18px; opacity:0.3;">🏠</span>
+      <div class="team-area" data-name="PD | Global Design" data-type="Team Area &middot; Your Location" style="left:1330px; top:360px; width:150px; height:240px;">
+        <span class="room-icon" style="font-size:18px; opacity:0.3;">&#x1F3E0;</span>
         <span class="room-label" style="font-size:10px;">PD | Global Design</span>
         <span class="room-sublabel" style="color:#cc7a00;">YOUR WAYPOINT</span>
       </div>
     </div>
   </div>
+
+  <!-- Floating floor badge (bottom-left) -->
+  <div class="float-badge">
+    <svg style="width:20px;height:20px;flex-shrink:0;" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg" fill="none">
+      <rect width="160" height="160" rx="80" fill="#2C415A"/>
+      <path d="M116.94 41.5076C116.698 41.2697 116.411 41.0811 116.094 40.9526C115.778 40.8241 115.439 40.7582 115.097 40.7588H44.8737C44.5316 40.7586 44.1927 40.8246 43.8766 40.953C43.5604 41.0814 43.2731 41.2697 43.031 41.5072C42.7889 41.7447 42.5968 42.0268 42.4657 42.3372C42.3346 42.6476 42.267 42.9803 42.2668 43.3164V101.582C42.2672 101.986 42.3646 102.383 42.551 102.743C42.7375 103.103 43.0078 103.414 43.34 103.651L77.121 127.753H77.1222C77.9548 128.348 78.9574 128.668 79.9865 128.668C81.0156 128.668 82.0182 128.348 82.8508 127.753L116.629 103.66C116.961 103.423 117.232 103.111 117.419 102.751C117.606 102.391 117.704 101.993 117.704 101.589V43.3194C117.704 42.983 117.637 42.6499 117.506 42.3392C117.374 42.0284 117.182 41.746 116.94 41.5082V41.5076ZM108.755 45.8763L95.581 55.2732C95.3844 55.4154 95.1486 55.4959 94.9046 55.5042C94.6606 55.5125 94.4198 55.4481 94.2137 55.3196C91.5604 53.6274 88.475 52.7048 85.3118 52.6579C82.1487 52.6109 79.0363 53.4414 76.3322 55.0541C76.1606 55.1278 75.9973 55.2188 75.8449 55.3256L70.1537 59.3862L51.2162 45.8773L108.755 45.8763ZM112.12 97.7799L112.078 98.0566C111.942 98.7655 111.61 99.4237 111.117 99.9581C110.565 100.487 109.841 100.807 109.072 100.862C108.303 100.916 107.539 100.701 106.916 100.254L92.5681 90.0095L92.4634 89.9359C91.5935 89.3143 90.1724 89.3217 89.3809 90.0387C89.117 90.2733 88.9097 90.5628 88.7741 90.8861C88.6385 91.2094 88.5781 91.5583 88.5972 91.9075C88.6163 92.2566 88.7145 92.5972 88.8846 92.9043C89.0547 93.2115 89.2924 93.4775 89.5804 93.6829L89.7561 93.8077L102.916 103.195C103.286 103.448 103.6 103.771 103.839 104.146C104.079 104.521 104.24 104.939 104.312 105.376C104.402 105.956 104.327 106.549 104.095 107.09C103.864 107.631 103.485 108.099 103.001 108.442L102.699 108.657C102.141 109.055 101.469 109.27 100.779 109.27C100.089 109.27 99.417 109.055 98.8587 108.657L82.539 97.0152C81.6691 96.396 80.2455 96.402 79.4553 97.118C79.1912 97.3525 78.9838 97.6419 78.8481 97.9652C78.7124 98.2884 78.6518 98.6373 78.6708 98.9865C78.6898 99.3356 78.7879 99.6762 78.9579 99.9834C79.1279 100.291 79.3656 100.557 79.6536 100.762L92.988 110.274C93.3578 110.527 93.672 110.85 93.9118 111.225C94.1516 111.6 94.3121 112.018 94.3839 112.455C94.4748 113.035 94.4006 113.629 94.1694 114.17C93.9382 114.712 93.559 115.18 93.0738 115.523L92.7709 115.738C92.2129 116.136 91.5411 116.35 90.8516 116.35C90.1622 116.35 89.4904 116.136 88.9324 115.738L85.9597 113.616L72.6115 104.095C71.7416 103.475 70.3193 103.484 69.529 104.2C69.2649 104.434 69.0574 104.723 68.9216 105.046C68.7859 105.369 68.7253 105.718 68.7443 106.067C68.7633 106.417 68.8614 106.757 69.0315 107.064C69.2015 107.371 69.4393 107.637 69.7273 107.842L83.063 117.356C83.4323 117.609 83.7462 117.932 83.9862 118.306C84.2262 118.68 84.3874 119.098 84.4603 119.534C84.5504 120.115 84.4755 120.708 84.2439 121.25C84.0123 121.792 83.633 122.26 83.1478 122.603L82.8549 122.812C82.359 123.167 81.7713 123.377 81.1593 123.418C80.5474 123.458 79.9362 123.329 79.396 123.044L47.4806 100.277V49.539L61.35 59.4326L65.7222 62.5493L57.8001 68.2C56.4008 69.1989 55.3344 70.5829 54.7359 72.177C54.1373 73.7712 54.0335 75.5038 54.4375 77.156C54.8415 78.8081 55.7351 80.3054 57.0055 81.4586C58.2759 82.6118 59.8658 83.3691 61.5744 83.6347C62.0332 83.7063 62.497 83.7423 62.9615 83.7424C64.8045 83.7426 66.5998 83.1675 68.0883 82.1001L79.1667 74.1986C79.5857 73.8993 80.0906 73.738 80.6088 73.738C81.1269 73.738 81.6318 73.8993 82.0509 74.1986L111.117 94.9405C111.509 95.296 111.806 95.7411 111.981 96.2364C112.156 96.7317 112.204 97.2622 112.12 97.7799ZM112.489 89.5831L83.0918 68.614C82.3697 68.0992 81.5003 67.822 80.608 67.822C79.7158 67.822 78.8464 68.0992 78.1243 68.614L65.0232 77.9587C64.6478 78.2287 64.2218 78.4233 63.7696 78.5313C63.3175 78.6392 62.8481 78.6585 62.3884 78.5879C61.9286 78.5173 61.4876 78.3582 61.0906 78.1199C60.6935 77.8815 60.3483 77.5685 60.0747 77.1988C59.8011 76.8291 59.6044 76.41 59.496 75.9655C59.3876 75.5211 59.3696 75.0599 59.4431 74.6086C59.5165 74.1572 59.6799 73.7246 59.9239 73.3354C60.1679 72.9462 60.4877 72.6082 60.865 72.3406L70.1549 65.7142H70.1573L78.2448 59.9457C80.4349 58.3824 83.1132 57.6221 85.8147 57.7967C88.5161 57.9712 91.0699 59.0698 93.0326 60.9014C93.4733 61.3023 94.0428 61.5392 94.6426 61.5712C95.2423 61.6031 95.8346 61.4281 96.3168 61.0764L112.492 49.5394L112.489 89.5831Z" fill="#FBF8F2"/>
+    </svg>
+    <span>Remitly &middot; 7th Floor</span>
+  </div>
+
+  <!-- Floating zoom stack (right side) -->
+  <div class="float-zoom">
+    <button class="bar-btn" id="zoom-in-btn" title="Zoom in">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
+      </svg>
+    </button>
+    <div class="bar-divider"></div>
+    <button class="bar-btn" id="zoom-out-btn" title="Zoom out">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Floating right-side action buttons -->
+  <div class="float-row">
+    <!-- Rotate pill -->
+    <div class="rotate-pill">
+      <button class="bar-btn" onclick="rotateMap(-90)" title="Rotate left">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M7.11 8.53L5.7 7.11C4.8 8.27 4.24 9.61 4.07 11h2.02c.14-.87.49-1.72 1.02-2.47zM6.09 13H4.07c.17 1.39.72 2.73 1.62 3.89l1.41-1.42c-.52-.75-.87-1.59-1.01-2.47zm1.01 5.32c1.16.9 2.51 1.44 3.9 1.61V17.9c-.87-.15-1.71-.49-2.46-1.03L7.1 18.32zM13 4.07V1L8.45 5.55 13 10V6.09c2.84.48 5 2.94 5 5.91s-2.16 5.43-5 5.91v2.02c3.95-.49 7-3.85 7-7.93s-3.05-7.44-7-7.93z"/>
+        </svg>
+      </button>
+      <div class="bar-divider"></div>
+      <div class="rotate-label" id="rotate-label">180&deg;</div>
+      <div class="bar-divider"></div>
+      <button class="bar-btn" onclick="rotateMap(90)" title="Rotate right">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M15.55 5.55L11 1v3.07C7.06 4.56 4 7.92 4 12s3.05 7.44 7 7.93v-2.02c-2.84-.48-5-2.94-5-5.91s2.16-5.43 5-5.91V10l4.55-4.45zM19.93 11c-.17-1.39-.72-2.73-1.62-3.89l-1.42 1.42c.54.75.88 1.6 1.02 2.47h2.02zm-1.62 5.89l-1.42-1.42c.54-.75.88-1.6 1.02-2.47h2.02c-.17 1.39-.72 2.73-1.62 3.89zm-3.42 2.04V20.9c1.39-.17 2.73-.72 3.89-1.62l-1.42-1.42c-.75.54-1.59.89-2.47 1.02z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Intro / landing screen -->
+  <div id="intro-screen">
+    <div class="intro-eyebrow">
+      <svg class="intro-eyebrow-logo" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg" fill="none">
+        <rect width="160" height="160" rx="80" fill="#2C415A"/>
+        <path d="M116.94 41.5076C116.698 41.2697 116.411 41.0811 116.094 40.9526C115.778 40.8241 115.439 40.7582 115.097 40.7588H44.8737C44.5316 40.7586 44.1927 40.8246 43.8766 40.953C43.5604 41.0814 43.2731 41.2697 43.031 41.5072C42.7889 41.7447 42.5968 42.0268 42.4657 42.3372C42.3346 42.6476 42.267 42.9803 42.2668 43.3164V101.582C42.2672 101.986 42.3646 102.383 42.551 102.743C42.7375 103.103 43.0078 103.414 43.34 103.651L77.121 127.753H77.1222C77.9548 128.348 78.9574 128.668 79.9865 128.668C81.0156 128.668 82.0182 128.348 82.8508 127.753L116.629 103.66C116.961 103.423 117.232 103.111 117.419 102.751C117.606 102.391 117.704 101.993 117.704 101.589V43.3194C117.704 42.983 117.637 42.6499 117.506 42.3392C117.374 42.0284 117.182 41.746 116.94 41.5082V41.5076ZM108.755 45.8763L95.581 55.2732C95.3844 55.4154 95.1486 55.4959 94.9046 55.5042C94.6606 55.5125 94.4198 55.4481 94.2137 55.3196C91.5604 53.6274 88.475 52.7048 85.3118 52.6579C82.1487 52.6109 79.0363 53.4414 76.3322 55.0541C76.1606 55.1278 75.9973 55.2188 75.8449 55.3256L70.1537 59.3862L51.2162 45.8773L108.755 45.8763ZM112.12 97.7799L112.078 98.0566C111.942 98.7655 111.61 99.4237 111.117 99.9581C110.565 100.487 109.841 100.807 109.072 100.862C108.303 100.916 107.539 100.701 106.916 100.254L92.5681 90.0095L92.4634 89.9359C91.5935 89.3143 90.1724 89.3217 89.3809 90.0387C89.117 90.2733 88.9097 90.5628 88.7741 90.8861C88.6385 91.2094 88.5781 91.5583 88.5972 91.9075C88.6163 92.2566 88.7145 92.5972 88.8846 92.9043C89.0547 93.2115 89.2924 93.4775 89.5804 93.6829L89.7561 93.8077L102.916 103.195C103.286 103.448 103.6 103.771 103.839 104.146C104.079 104.521 104.24 104.939 104.312 105.376C104.402 105.956 104.327 106.549 104.095 107.09C103.864 107.631 103.485 108.099 103.001 108.442L102.699 108.657C102.141 109.055 101.469 109.27 100.779 109.27C100.089 109.27 99.417 109.055 98.8587 108.657L82.539 97.0152C81.6691 96.396 80.2455 96.402 79.4553 97.118C79.1912 97.3525 78.9838 97.6419 78.8481 97.9652C78.7124 98.2884 78.6518 98.6373 78.6708 98.9865C78.6898 99.3356 78.7879 99.6762 78.9579 99.9834C79.1279 100.291 79.3656 100.557 79.6536 100.762L92.988 110.274C93.3578 110.527 93.672 110.85 93.9118 111.225C94.1516 111.6 94.3121 112.018 94.3839 112.455C94.4748 113.035 94.4006 113.629 94.1694 114.17C93.9382 114.712 93.559 115.18 93.0738 115.523L92.7709 115.738C92.2129 116.136 91.5411 116.35 90.8516 116.35C90.1622 116.35 89.4904 116.136 88.9324 115.738L85.9597 113.616L72.6115 104.095C71.7416 103.475 70.3193 103.484 69.529 104.2C69.2649 104.434 69.0574 104.723 68.9216 105.046C68.7859 105.369 68.7253 105.718 68.7443 106.067C68.7633 106.417 68.8614 106.757 69.0315 107.064C69.2015 107.371 69.4393 107.637 69.7273 107.842L83.063 117.356C83.4323 117.609 83.7462 117.932 83.9862 118.306C84.2262 118.68 84.3874 119.098 84.4603 119.534C84.5504 120.115 84.4755 120.708 84.2439 121.25C84.0123 121.792 83.633 122.26 83.1478 122.603L82.8549 122.812C82.359 123.167 81.7713 123.377 81.1593 123.418C80.5474 123.458 79.9362 123.329 79.396 123.044L47.4806 100.277V49.539L61.35 59.4326L65.7222 62.5493L57.8001 68.2C56.4008 69.1989 55.3344 70.5829 54.7359 72.177C54.1373 73.7712 54.0335 75.5038 54.4375 77.156C54.8415 78.8081 55.7351 80.3054 57.0055 81.4586C58.2759 82.6118 59.8658 83.3691 61.5744 83.6347C62.0332 83.7063 62.497 83.7423 62.9615 83.7424C64.8045 83.7426 66.5998 83.1675 68.0883 82.1001L79.1667 74.1986C79.5857 73.8993 80.0906 73.738 80.6088 73.738C81.1269 73.738 81.6318 73.8993 82.0509 74.1986L111.117 94.9405C111.509 95.296 111.806 95.7411 111.981 96.2364C112.156 96.7317 112.204 97.2622 112.12 97.7799ZM112.489 89.5831L83.0918 68.614C82.3697 68.0992 81.5003 67.822 80.608 67.822C79.7158 67.822 78.8464 68.0992 78.1243 68.614L65.0232 77.9587C64.6478 78.2287 64.2218 78.4233 63.7696 78.5313C63.3175 78.6392 62.8481 78.6585 62.3884 78.5879C61.9286 78.5173 61.4876 78.3582 61.0906 78.1199C60.6935 77.8815 60.3483 77.5685 60.0747 77.1988C59.8011 76.8291 59.6044 76.41 59.496 75.9655C59.3876 75.5211 59.3696 75.0599 59.4431 74.6086C59.5165 74.1572 59.6799 73.7246 59.9239 73.3354C60.1679 72.9462 60.4877 72.6082 60.865 72.3406L70.1549 65.7142H70.1573L78.2448 59.9457C80.4349 58.3824 83.1132 57.6221 85.8147 57.7967C88.5161 57.9712 91.0699 59.0698 93.0326 60.9014C93.4733 61.3023 94.0428 61.5392 94.6426 61.5712C95.2423 61.6031 95.8346 61.4281 96.3168 61.0764L112.492 49.5394L112.489 89.5831Z" fill="#FBF8F2"/>
+      </svg>
+      <span>Remitly &middot; 7th Floor</span>
+    </div>
+    <h1 class="intro-title">Where are<br>you headed?</h1>
+    <div class="intro-search-card">
+      <div class="intro-search-row">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
+        </svg>
+        <input type="text" id="intro-input" placeholder="Search for a room&hellip;" autocomplete="off" />
+      </div>
+      <div id="intro-dropdown" class="intro-dropdown"></div>
+    </div>
+
+    <!-- Infinite room ticker (rooms larger than Auckland) -->
+    <div class="intro-ticker">
+      <div class="intro-ticker-track">
+        <!-- copy 1 -->
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇮🇩</span><span class="intro-ticker-name">Bandung</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇫🇯</span><span class="intro-ticker-name">Nadi</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇰🇷</span><span class="intro-ticker-name">Gwangju</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇻🇳</span><span class="intro-ticker-name">Hanoi</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇯🇵</span><span class="intro-ticker-name">Kyoto</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇹🇱</span><span class="intro-ticker-name">Dili</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇹🇭</span><span class="intro-ticker-name">Bangkok</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇷🇺</span><span class="intro-ticker-name">Novosibirsk</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇲🇨</span><span class="intro-ticker-name">Monaco</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇫🇷</span><span class="intro-ticker-name">Bordeaux</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇵🇱</span><span class="intro-ticker-name">Wroclaw</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇭🇷</span><span class="intro-ticker-name">Zagreb</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇬🇧</span><span class="intro-ticker-name">Orkney</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇪🇸</span><span class="intro-ticker-name">Seville</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇵🇹</span><span class="intro-ticker-name">Ponta Delgada</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇵🇭</span><span class="intro-ticker-name">Quezon City</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇦🇺</span><span class="intro-ticker-name">Adelaide</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇨🇳</span><span class="intro-ticker-name">Shanghai</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇯🇵</span><span class="intro-ticker-name">Sendai</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇹🇲</span><span class="intro-ticker-name">Ashgabat</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇮🇹</span><span class="intro-ticker-name">Milan</span></div>
+        <!-- copy 2 (seamless loop) -->
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇮🇩</span><span class="intro-ticker-name">Bandung</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇫🇯</span><span class="intro-ticker-name">Nadi</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇰🇷</span><span class="intro-ticker-name">Gwangju</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇻🇳</span><span class="intro-ticker-name">Hanoi</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇯🇵</span><span class="intro-ticker-name">Kyoto</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇹🇱</span><span class="intro-ticker-name">Dili</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇹🇭</span><span class="intro-ticker-name">Bangkok</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇷🇺</span><span class="intro-ticker-name">Novosibirsk</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇲🇨</span><span class="intro-ticker-name">Monaco</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇫🇷</span><span class="intro-ticker-name">Bordeaux</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇵🇱</span><span class="intro-ticker-name">Wroclaw</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇭🇷</span><span class="intro-ticker-name">Zagreb</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇬🇧</span><span class="intro-ticker-name">Orkney</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇪🇸</span><span class="intro-ticker-name">Seville</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇵🇹</span><span class="intro-ticker-name">Ponta Delgada</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇵🇭</span><span class="intro-ticker-name">Quezon City</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇦🇺</span><span class="intro-ticker-name">Adelaide</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇨🇳</span><span class="intro-ticker-name">Shanghai</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇯🇵</span><span class="intro-ticker-name">Sendai</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇹🇲</span><span class="intro-ticker-name">Ashgabat</span></div>
+        <div class="intro-ticker-item"><span class="intro-ticker-flag">🇮🇹</span><span class="intro-ticker-name">Milan</span></div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script>
 const container = document.getElementById('map-container');
 const world = document.getElementById('map-world');
 let scale = 0.95, panX = 80, panY = 40, isDragging = false, startX, startY;
-let rotation = 180; // degrees - default rotated view
+let rotation = 180;
 
 function updateTransform(animate) {
   if (animate) {
     world.style.transition = 'transform 0.5s cubic-bezier(0.16, 1, 0.3, 1)';
   }
-  // Rotate around the center of the map (680, 440) in map-world coords
   world.style.transform = `translate(${panX}px, ${panY}px) scale(${scale}) rotate(${rotation}deg)`;
   world.style.transformOrigin = '780px 440px';
 
-  // Counter-rotate all text content so it remains upright
   document.querySelectorAll('.counter-rotate').forEach(el => {
     el.style.transform = `rotate(${-rotation}deg)`;
   });
 
-  // Update rotation label
   const label = document.getElementById('rotate-label');
   if (label) {
     const display = ((rotation % 360) + 360) % 360;
-    label.textContent = `${display}°`;
+    label.textContent = `${display}\u00b0`;
   }
 }
 
 function rotateMap(deg) {
   rotation += deg;
-  // Normalize to 0-360
   rotation = ((rotation % 360) + 360) % 360;
   updateTransform(true);
   setTimeout(() => { world.style.transition = 'transform 0.08s ease-out'; }, 550);
 }
 
 // Reset rotation when clicking the degree label
-document.addEventListener('DOMContentLoaded', () => {
-  const rl = document.getElementById('rotate-label');
-  if (rl) rl.addEventListener('click', () => { rotation = 0; updateTransform(true); setTimeout(() => { world.style.transition = 'transform 0.08s ease-out'; }, 550); });
+document.getElementById('rotate-label').addEventListener('click', () => {
+  rotation = 0; updateTransform(true);
+  setTimeout(() => { world.style.transition = 'transform 0.08s ease-out'; }, 550);
 });
+
+// Zoom buttons
+const MIN_SCALE = 0.12, MAX_SCALE = 2.5, ZOOM_STEP = 0.18;
+function applyZoom(newScale, ax, ay) {
+  const ratio = newScale / scale;
+  panX = (ax - 780) * (1 - ratio) + ratio * panX;
+  panY = (ay - 440) * (1 - ratio) + ratio * panY;
+  scale = newScale;
+}
+
+document.getElementById('zoom-in-btn').addEventListener('click', () => {
+  const newScale = Math.min(scale + ZOOM_STEP, MAX_SCALE);
+  applyZoom(newScale, window.innerWidth / 2, window.innerHeight / 2);
+  updateTransform(true);
+  setTimeout(() => { world.style.transition = 'transform 0.08s ease-out'; }, 550);
+});
+document.getElementById('zoom-out-btn').addEventListener('click', () => {
+  const newScale = Math.max(scale - ZOOM_STEP, MIN_SCALE);
+  applyZoom(newScale, window.innerWidth / 2, window.innerHeight / 2);
+  updateTransform(true);
+  setTimeout(() => { world.style.transition = 'transform 0.08s ease-out'; }, 550);
+});
+
+// Scroll wheel zoom (desktop)
+container.addEventListener('wheel', e => {
+  e.preventDefault();
+  const delta = e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP;
+  const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale + delta));
+  applyZoom(newScale, e.clientX, e.clientY);
+  updateTransform(false);
+}, { passive: false });
 
 // Tag all text elements for counter-rotation
 function initCounterRotation() {
   document.querySelectorAll('.room, .amenity, .restroom, .team-area, .phone-booth').forEach(el => {
-    // Wrap the inner content in a counter-rotate div
     const wrapper = document.createElement('div');
     wrapper.className = 'counter-rotate';
     wrapper.style.cssText = 'display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; width:100%; height:100%;';
     while (el.firstChild) wrapper.appendChild(el.firstChild);
     el.appendChild(wrapper);
   });
-  // Also counter-rotate markers
   ['origin-dot','dest-marker'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.add('counter-rotate');
   });
 }
 initCounterRotation();
+
 function centerMap() {
-  panX = (window.innerWidth - 1560 * scale) / 2 + 780 * scale - 780 * scale;
-  panY = (window.innerHeight - 880 * scale) / 2 + 440 * scale - 440 * scale;
-  panX = (window.innerWidth) / 2 - 780 * scale;
-  panY = (window.innerHeight) / 2 - 440 * scale;
+  const mapW = 1560, mapH = 880;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const isPortrait = vh > vw;
+
+  if (isPortrait) {
+    scale = (vw / mapW) * 1.85;
+    scale = Math.max(0.25, Math.min(scale, 1.4));
+    panX = vw / 2 - 780;
+    panY = vh * 0.42 - 440;
+  } else {
+    const uiH = 80;
+    const scaleMultiplier = vw >= 768 ? 0.71 : 0.95;
+    scale = Math.max(vw / mapW, (vh - uiH) / mapH) * scaleMultiplier;
+    scale = Math.max(0.18, Math.min(scale, 1.2));
+    panX = vw / 2 - 780;
+    panY = vh / 2 - 440;
+  }
   updateTransform(false);
 }
 centerMap();
 window.addEventListener('resize', centerMap);
 
+// Mouse drag
 container.addEventListener('mousedown', e => {
   if (e.target.closest('[data-name]')) return;
   isDragging = true; startX = e.clientX - panX; startY = e.clientY - panY; world.style.transition = 'none';
 });
 window.addEventListener('mousemove', e => { if (!isDragging) return; panX = e.clientX - startX; panY = e.clientY - startY; updateTransform(false); });
 window.addEventListener('mouseup', () => { isDragging = false; world.style.transition = 'transform 0.08s ease-out'; });
-let lastTouchDist = 0, lastTouchAngle = 0;
+
+// Touch: pan (1 finger) + pinch-zoom & rotate (2 fingers)
+let lastTouchDist = 0, lastTouchAngle = 0, lastTouchMidX = 0, lastTouchMidY = 0;
+
 container.addEventListener('touchstart', e => {
-  if (e.touches.length === 1) { isDragging = true; startX = e.touches[0].clientX - panX; startY = e.touches[0].clientY - panY; world.style.transition = 'none'; }
-  else if (e.touches.length === 2) {
+  if (e.touches.length === 1) {
+    isDragging = true;
+    startX = e.touches[0].clientX - panX;
+    startY = e.touches[0].clientY - panY;
+    world.style.transition = 'none';
+  } else if (e.touches.length === 2) {
     isDragging = false;
-    lastTouchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-    lastTouchAngle = Math.atan2(e.touches[1].clientY - e.touches[0].clientY, e.touches[1].clientX - e.touches[0].clientX) * 180 / Math.PI;
+    lastTouchDist = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+    lastTouchAngle = Math.atan2(
+      e.touches[1].clientY - e.touches[0].clientY,
+      e.touches[1].clientX - e.touches[0].clientX
+    ) * 180 / Math.PI;
+    lastTouchMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+    lastTouchMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
     world.style.transition = 'none';
   }
-});
+}, { passive: true });
+
 container.addEventListener('touchmove', e => {
   e.preventDefault();
-  if (e.touches.length === 1 && isDragging) { panX = e.touches[0].clientX - startX; panY = e.touches[0].clientY - startY; updateTransform(false); }
-  else if (e.touches.length === 2) {
-    const angle = Math.atan2(e.touches[1].clientY - e.touches[0].clientY, e.touches[1].clientX - e.touches[0].clientX) * 180 / Math.PI;
+  if (e.touches.length === 1 && isDragging) {
+    panX = e.touches[0].clientX - startX;
+    panY = e.touches[0].clientY - startY;
+    updateTransform(false);
+  } else if (e.touches.length === 2) {
+    const dist = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+    const angle = Math.atan2(
+      e.touches[1].clientY - e.touches[0].clientY,
+      e.touches[1].clientX - e.touches[0].clientX
+    ) * 180 / Math.PI;
+    const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+    const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+
+    // Pinch zoom: scale around the midpoint
+    if (lastTouchDist > 0) {
+      const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale * (dist / lastTouchDist)));
+      applyZoom(newScale, midX, midY);
+    }
+
+    // Rotation
     rotation += angle - lastTouchAngle;
+
+    lastTouchDist = dist;
     lastTouchAngle = angle;
+    lastTouchMidX = midX;
+    lastTouchMidY = midY;
     updateTransform(false);
   }
 }, { passive: false });
-container.addEventListener('touchend', () => {
+
+container.addEventListener('touchend', e => {
   isDragging = false;
+  lastTouchDist = 0;
   world.style.transition = 'transform 0.08s ease-out';
-  // Snap to nearest 90° if close
+  // Snap rotation to nearest 90deg if close
   const snapped = Math.round(rotation / 90) * 90;
   if (Math.abs(rotation - snapped) < 8) {
     rotation = snapped;
     updateTransform(true);
     setTimeout(() => { world.style.transition = 'transform 0.08s ease-out'; }, 350);
   }
-});
+}, { passive: true });
 
 // Tooltip
-const tooltip = document.getElementById('tooltip'), tooltipName = document.getElementById('tooltip-name'), tooltipType = document.getElementById('tooltip-type');
+const tooltip = document.getElementById('tooltip');
+const tooltipName = document.getElementById('tooltip-name');
+const tooltipType = document.getElementById('tooltip-type');
 document.querySelectorAll('[data-name]').forEach(el => {
-  el.addEventListener('mouseenter', () => { tooltipName.textContent = el.dataset.name; tooltipType.textContent = el.dataset.type; tooltip.classList.add('show'); });
-  el.addEventListener('mousemove', e => { tooltip.style.left = (e.clientX+14)+'px'; tooltip.style.top = (e.clientY-10)+'px'; });
+  el.addEventListener('mouseenter', () => {
+    tooltipName.textContent = el.dataset.name;
+    tooltipType.textContent = el.dataset.type;
+    tooltip.classList.add('show');
+  });
+  el.addEventListener('mousemove', e => {
+    tooltip.style.left = (e.clientX + 14) + 'px';
+    tooltip.style.top = (e.clientY - 10) + 'px';
+  });
   el.addEventListener('mouseleave', () => tooltip.classList.remove('show'));
 });
 
@@ -697,29 +1128,19 @@ const ORIGIN = { x: 1405, y: 515 };
 
 const W = {
   ORIGIN: { x: 1405, y: 515 },
-  // Right corridor
   R1: { x: 1300, y: 515 }, R2: { x: 1300, y: 340 }, R3: { x: 1300, y: 200 },
   R4: { x: 1300, y: 650 }, R5: { x: 1300, y: 780 },
-  // Top corridor
   T1: { x: 1230, y: 200 }, T2: { x: 1000, y: 200 }, T3: { x: 900, y: 200 },
   T4: { x: 765, y: 200 }, T5: { x: 625, y: 200 }, T6: { x: 450, y: 200 },
   T7: { x: 300, y: 200 }, T8: { x: 230, y: 80 },
-  // Left corridor
   L1: { x: 300, y: 300 }, L2: { x: 300, y: 420 }, L3: { x: 300, y: 550 },
   L4: { x: 300, y: 650 }, L5: { x: 300, y: 750 },
-  // Bottom corridor (above the rooms row - walkway between core and rooms)
   B1: { x: 625, y: 615 }, B2: { x: 765, y: 615 }, B5: { x: 1230, y: 615 },
-  // Café corridor (below Milan/Ashgabat/AllGender, through café)
   C1: { x: 780, y: 780 }, C2: { x: 950, y: 780 }, C3: { x: 1100, y: 780 },
-  // Around rooms: left of Ashgabat, right of Milan
   AR1: { x: 780, y: 650 }, AR2: { x: 1230, y: 650 },
-  // Middle crossings above core (y=265 = clear gap between top rooms ending at y=165 and middle rooms starting at y=295)
   M1: { x: 625, y: 265 }, M2: { x: 900, y: 265 }, M3: { x: 1000, y: 265 }, M4: { x: 1150, y: 265 },
-  // Bottom-left
   BL1: { x: 450, y: 650 }, BL2: { x: 450, y: 740 }, BL3: { x: 600, y: 740 },
-  // Bottom-right
   BR1: { x: 1230, y: 780 },
-  // Far-right upper
   FR1: { x: 1430, y: 340 }, FR2: { x: 1430, y: 230 },
 };
 
@@ -729,19 +1150,14 @@ const EDGES = [
   ['R3','T1'],
   ['T1','T2'], ['T2','T3'], ['T3','T4'], ['T4','T5'], ['T5','T6'], ['T6','T7'], ['T7','T8'],
   ['T7','L1'], ['L1','L2'], ['L2','L3'], ['L3','L4'], ['L4','L5'],
-  // Bottom corridor above rooms
   ['B1','B2'], ['B2','AR1'], ['AR2','B5'], ['B5','R4'],
-  // Café corridor below rooms
   ['AR1','C1'], ['C1','C2'], ['C2','C3'],
   ['C3','BR1'], ['BR1','R5'], ['AR2','BR1'],
-  // Connect café corridor to bottom-left
   ['C1','BL3'],
-  // Vertical connections
   ['T5','M1'], ['M1','B1'],
   ['T4','B2'],
   ['T1','M4'],
   ['R2','M4'],
-  // Middle corridor above core (M1–M4 horizontal + vertical drops from top corridor)
   ['M1','M2'], ['M2','M3'], ['M3','M4'],
   ['T3','M2'], ['T2','M3'],
   ['BL1','BL2'], ['BL2','BL3'], ['BL3','B1'],
@@ -796,7 +1212,6 @@ const destMarker = document.getElementById('dest-marker');
 const pulseRing = document.getElementById('pulse-ring');
 const routeCard = document.getElementById('route-card');
 const rcDest = document.getElementById('rc-dest');
-const rcTime = document.getElementById('rc-time');
 const rcTo = document.getElementById('rc-to');
 const rcClose = document.getElementById('rc-close');
 const rcCountry = document.getElementById('rc-country');
@@ -807,12 +1222,14 @@ const rcFactText = document.getElementById('rc-fact-text');
 const rcFactDots = document.getElementById('rc-fact-dots');
 const allRooms = document.querySelectorAll('[data-name]');
 let activeTarget = null;
+let routePixelLength = 0;
 
 function clearRoute() {
   pathSvg.innerHTML = '';
   originDot.style.display = originRing.style.display = destMarker.style.display = pulseRing.style.display = 'none';
   routeCard.classList.remove('show');
   activeTarget = null;
+  routePixelLength = 0;
   allRooms.forEach(el => el.classList.remove('highlight','dimmed'));
 }
 
@@ -832,32 +1249,11 @@ function buildSmoothPath(points) {
 }
 
 const COUNTRY_EMOJI = {
-  'Bandung':        '🇮🇩',
-  'Nadi':           '🇫🇯',
-  'Guilin':         '🇨🇳',
-  'Haiphong':       '🇻🇳',
-  'Cebu City':      '🇵🇭',
-  'Auckland':       '🇳🇿',
-  'Gwangju':        '🇰🇷',
-  'Hanoi':          '🇻🇳',
-  'Kyoto':          '🇯🇵',
-  'Dili':           '🇹🇱',
-  'Bangkok':        '🇹🇭',
-  'Novosibirsk':    '🇷🇺',
-  'Monaco':         '🇲🇨',
-  'Bordeaux':       '🇫🇷',
-  'Wroclaw':        '🇵🇱',
-  'Zagreb':         '🇭🇷',
-  'Orkney':         '🇬🇧',
-  'Seville':        '🇪🇸',
-  'Ponta Delgada':  '🇵🇹',
-  'Quezon City':    '🇵🇭',
-  'Adelaide':       '🇦🇺',
-  'Shanghai':       '🇨🇳',
-  'Sendai':         '🇯🇵',
-  'Ashgabat':       '🇹🇲',
-  'Milan':          '🇮🇹',
-  'Trondheim':      '🇳🇴',
+  'Bandung':'🇮🇩','Nadi':'🇫🇯','Guilin':'🇨🇳','Haiphong':'🇻🇳','Cebu City':'🇵🇭',
+  'Auckland':'🇳🇿','Gwangju':'🇰🇷','Hanoi':'🇻🇳','Kyoto':'🇯🇵','Dili':'🇹🇱',
+  'Bangkok':'🇹🇭','Novosibirsk':'🇷🇺','Monaco':'🇲🇨','Bordeaux':'🇫🇷','Wroclaw':'🇵🇱',
+  'Zagreb':'🇭🇷','Orkney':'🇬🇧','Seville':'🇪🇸','Ponta Delgada':'🇵🇹','Quezon City':'🇵🇭',
+  'Adelaide':'🇦🇺','Shanghai':'🇨🇳','Sendai':'🇯🇵','Ashgabat':'🇹🇲','Milan':'🇮🇹','Trondheim':'🇳🇴',
 };
 
 const CITY_DATA = {
@@ -872,18 +1268,18 @@ const CITY_DATA = {
   'Kyoto':          { country: 'Japan', facts: ['Kyoto was Japan\'s imperial capital for over 1,000 years, from 794 to 1869 AD.', 'The city has 17 UNESCO World Heritage Sites — more than almost any other city in the world.', 'Kyoto was removed from the atomic bomb target list in WWII reportedly due to its cultural importance.', 'Kyoto\'s geisha districts (hanamachi) are among the last places where traditional geisha culture survives.', 'Fushimi Inari Shrine has over 10,000 torii gates winding through the forested hillside behind it.'] },
   'Dili':           { country: 'Timor-Leste', facts: ['Dili is the capital of Timor-Leste, one of the world\'s youngest nations, which gained independence in 2002.', 'The Cristo Rei of Dili is a 27-metre statue of Jesus standing on a globe overlooking the Timor Sea.', 'Timor-Leste is one of only two Christian-majority nations in Southeast Asia, alongside the Philippines.', 'The waters off Dili are considered some of the most pristine scuba diving locations in the world.', 'Dili\'s name derives from the Portuguese colonial era — it was the capital of Portuguese Timor from 1769.'] },
   'Bangkok':        { country: 'Thailand', facts: ['Bangkok\'s full ceremonial name is 168 characters long — the longest official place name in the world.', 'The city has over 400 Buddhist temples (wats) — more than any other city on Earth.', 'Bangkok is the world\'s most visited city, receiving over 22 million international tourists annually.', 'Tuk-tuks, the iconic three-wheeled taxis, were introduced to Bangkok in the 1960s from Japan.', 'Parts of Bangkok sink by up to 3cm per year due to groundwater extraction — the city sits just 1.5m above sea level.'] },
-  'Novosibirsk':    { country: 'Russia', facts: ['Novosibirsk is Russia\'s third-largest city and the largest city in all of Siberia.', 'The city was founded in 1893 as a railway bridge crossing point on the Trans-Siberian Railway.', 'Akademgorodok, a "science city" suburb, was built in 1957 and once housed over 65 research institutes.', 'Novosibirsk Opera and Ballet Theatre is the largest opera house in Russia — bigger than the Bolshoi in Moscow.', 'The city experiences temperature swings from −40°C in winter to +35°C in summer — a 75°C annual range.'] },
-  'Monaco':         { country: 'Monaco', facts: ['Monaco is the world\'s second-smallest country at just 2.02 km², yet the world\'s most densely populated nation.', 'About 32% of Monaco\'s residents are millionaires — the highest wealth concentration anywhere on Earth.', 'Monaco has no income tax, which has attracted wealthy residents since the 19th century.', 'The Monaco Grand Prix has been held on the same street circuit since 1929, making it Formula 1\'s most storied race.', 'Despite its tiny size, Monaco has its own orchestra, ballet company, and philharmonic.'] },
-  'Bordeaux':       { country: 'France', facts: ['Bordeaux is the wine capital of the world, producing some of the most sought-after wines on the planet.', 'The city\'s historic center is France\'s largest urban UNESCO World Heritage area.', 'The Miroir d\'Eau (water mirror) is the world\'s largest reflecting pool, covering 3,450 m² of pavement.', 'Bordeaux has more 18th-century buildings than any other French city except Paris.', 'The Port of the Moon — the arc-shaped bend of the Garonne River cradling Bordeaux — gives the city its UNESCO name.'] },
-  'Wroclaw':        { country: 'Poland', facts: ['Wroclaw has over 300 bridges — more bridges per square kilometer than Venice or Amsterdam.', 'The city has changed hands 6 times between nations: Bohemia, Austria, Prussia, Germany, and Poland.', 'Over 300 bronze dwarf statues are hidden around the city, started as a political protest movement in 2001.', 'Wroclaw was a joint host of UEFA Euro 2012 alongside Warsaw, Gdańsk, and Poznań.', 'Wroclaw\'s Market Square (Rynek) is one of the largest medieval squares in Europe at 213 × 178 metres.'] },
+  'Novosibirsk':    { country: 'Russia', facts: ['Novosibirsk is Russia\'s third-largest city and the largest city in all of Siberia.', 'The city was founded in 1893 as a railway bridge crossing point on the Trans-Siberian Railway.', 'Akademgorodok, a "science city" suburb, was built in 1957 and once housed over 65 research institutes.', 'Novosibirsk Opera and Ballet Theatre is the largest opera house in Russia — bigger than the Bolshoi in Moscow.', 'The city experiences temperature swings from \u221240\u00b0C in winter to +35\u00b0C in summer — a 75\u00b0C annual range.'] },
+  'Monaco':         { country: 'Monaco', facts: ['Monaco is the world\'s second-smallest country at just 2.02 km\u00b2, yet the world\'s most densely populated nation.', 'About 32% of Monaco\'s residents are millionaires — the highest wealth concentration anywhere on Earth.', 'Monaco has no income tax, which has attracted wealthy residents since the 19th century.', 'The Monaco Grand Prix has been held on the same street circuit since 1929, making it Formula 1\'s most storied race.', 'Despite its tiny size, Monaco has its own orchestra, ballet company, and philharmonic.'] },
+  'Bordeaux':       { country: 'France', facts: ['Bordeaux is the wine capital of the world, producing some of the most sought-after wines on the planet.', 'The city\'s historic center is France\'s largest urban UNESCO World Heritage area.', 'The Miroir d\'Eau (water mirror) is the world\'s largest reflecting pool, covering 3,450 m\u00b2 of pavement.', 'Bordeaux has more 18th-century buildings than any other French city except Paris.', 'The Port of the Moon — the arc-shaped bend of the Garonne River cradling Bordeaux — gives the city its UNESCO name.'] },
+  'Wroclaw':        { country: 'Poland', facts: ['Wroclaw has over 300 bridges — more bridges per square kilometer than Venice or Amsterdam.', 'The city has changed hands 6 times between nations: Bohemia, Austria, Prussia, Germany, and Poland.', 'Over 300 bronze dwarf statues are hidden around the city, started as a political protest movement in 2001.', 'Wroclaw was a joint host of UEFA Euro 2012 alongside Warsaw, Gda\u0144sk, and Pozna\u0144.', 'Wroclaw\'s Market Square (Rynek) is one of the largest medieval squares in Europe at 213 \u00d7 178 metres.'] },
   'Zagreb':         { country: 'Croatia', facts: ['Zagreb is home to the world\'s only Museum of Broken Relationships — featuring mementos from ended romances.', 'The medieval Upper Town (Gornji Grad) has been continuously inhabited for over 900 years.', 'Zagreb\'s Cathedral is the tallest building in Croatia at 105 metres and a major Catholic pilgrimage site.', 'Zagreb\'s tram network, running since 1891, is one of the oldest still in operation in the world.', 'The funicular connecting the Lower and Upper Towns, built in 1890, is one of the shortest in the world at 66m.'] },
   'Orkney':         { country: 'United Kingdom', facts: ['Orkney is a Scottish archipelago of 70 islands, of which only 20 are permanently inhabited.', 'The Neolithic village of Skara Brae on Orkney is older than Stonehenge and the Egyptian pyramids.', 'Scapa Flow in Orkney is where the German High Seas Fleet was scuttled in 1919 — the largest single-day loss of shipping in history.', 'Orkney generates more than 100% of its electricity needs from renewable energy sources.', 'The Standing Stones of Stenness on Orkney are among the oldest standing stone monuments in the British Isles.'] },
-  'Seville':        { country: 'Spain', facts: ['Seville\'s Alcázar is the oldest royal palace still in use in Europe, with parts dating back to the 10th century.', 'Christopher Columbus is buried in Seville Cathedral — the world\'s largest Gothic building.', 'Seville is the hottest city in continental Europe, regularly reaching 40°C+ in summer.', 'Seville was the first city in Europe to have a permanent opera house, opened in 1731.', 'Both the fictional Barber of Seville (Rossini) and Don Juan are set in Seville.'] },
+  'Seville':        { country: 'Spain', facts: ['Seville\'s Alc\u00e1zar is the oldest royal palace still in use in Europe, with parts dating back to the 10th century.', 'Christopher Columbus is buried in Seville Cathedral — the world\'s largest Gothic building.', 'Seville is the hottest city in continental Europe, regularly reaching 40\u00b0C+ in summer.', 'Seville was the first city in Europe to have a permanent opera house, opened in 1731.', 'Both the fictional Barber of Seville (Rossini) and Don Juan are set in Seville.'] },
   'Ponta Delgada':  { country: 'Portugal', facts: ['Ponta Delgada is the capital of the Azores, a Portuguese archipelago sitting in the mid-Atlantic Ocean.', 'The city\'s iconic streets are paved with black and white basalt cobblestones made from local volcanic rock.', 'The Azores straddle three tectonic plates — the Eurasian, African, and North American — a geological rarity.', 'Sete Cidades, a nearby volcanic caldera, contains two lakes of visibly different colors side by side.', 'The city hosts the Festas do Senhor Santo Cristo dos Milagres, the largest popular religious festival in the Azores.'] },
   'Quezon City':    { country: 'Philippines', facts: ['Quezon City was the capital of the Philippines from 1948 to 1976, before Manila reclaimed the title.', 'The city is named after Manuel L. Quezon, the first president of the Philippine Commonwealth.', 'Quezon City is the most populous city in the Philippines with nearly 3 million residents.', 'The Quezon Memorial Circle is a 66-hectare national park and shrine dedicated to President Quezon.', 'The University of the Philippines\' main Diliman campus — the country\'s premier university — is located here.'] },
-  'Adelaide':       { country: 'Australia', facts: ['Adelaide is the only Australian capital city that was entirely free-settled — no convicts were ever transported here.', 'The city has more restaurants and cafés per capita than New York City.', 'Adelaide hosts WOMADelaide, one of the world\'s leading world music and dance festivals, every March.', 'Adelaide\'s street grid was designed by Colonel William Light in 1836 and has never needed significant modification.', 'The city is surrounded by world-class wine regions — Barossa Valley, McLaren Vale, and the Adelaide Hills are all within an hour.'] },
+  'Adelaide':       { country: 'Australia', facts: ['Adelaide is the only Australian capital city that was entirely free-settled — no convicts were ever transported here.', 'The city has more restaurants and caf\u00e9s per capita than New York City.', 'Adelaide hosts WOMADelaide, one of the world\'s leading world music and dance festivals, every March.', 'Adelaide\'s street grid was designed by Colonel William Light in 1836 and has never needed significant modification.', 'The city is surrounded by world-class wine regions — Barossa Valley, McLaren Vale, and the Adelaide Hills are all within an hour.'] },
   'Shanghai':       { country: 'China', facts: ['Shanghai\'s skyline includes over 3,000 skyscrapers — more high-rises than New York City.', 'The Shanghai Maglev, launched in 2004, travels at 431 km/h — the fastest commercial train in the world.', 'Shanghai is the world\'s busiest container port, handling over 45 million containers annually.', 'The Bund waterfront features 52 buildings representing over 12 different architectural styles.', 'Shanghai\'s 1920s-30s art deco heritage is so celebrated the city is sometimes called the "Paris of the East."'] },
-  'Sendai':         { country: 'Japan', facts: ['Sendai is known as the "City of Trees" for its zelkova tree-lined boulevards, especially Jozenji-dori Avenue.', 'The city is home to Date Masamune, the "One-Eyed Dragon" — one of feudal Japan\'s most powerful warlords.', 'Sendai Tanabata, held every August, is one of Japan\'s most celebrated festivals with millions of visitors.', 'Sendai was severely impacted by the 2011 Tōhoku earthquake and tsunami, but rebuilt as a model of disaster resilience.', 'Gyutan (grilled beef tongue) was invented by a Sendai restaurant owner in 1948 and is now the city\'s signature dish.'] },
+  'Sendai':         { country: 'Japan', facts: ['Sendai is known as the "City of Trees" for its zelkova tree-lined boulevards, especially Jozenji-dori Avenue.', 'The city is home to Date Masamune, the "One-Eyed Dragon" — one of feudal Japan\'s most powerful warlords.', 'Sendai Tanabata, held every August, is one of Japan\'s most celebrated festivals with millions of visitors.', 'Sendai was severely impacted by the 2011 T\u014dhoku earthquake and tsunami, but rebuilt as a model of disaster resilience.', 'Gyutan (grilled beef tongue) was invented by a Sendai restaurant owner in 1948 and is now the city\'s signature dish.'] },
   'Ashgabat':       { country: 'Turkmenistan', facts: ['Ashgabat holds the Guinness World Record for the highest density of white marble-clad buildings in the world.', 'The city was almost completely destroyed by a catastrophic earthquake in 1948 that killed over 110,000 people.', 'Ashgabat\'s Neutrality Arch was originally topped with a rotating golden statue of President Niyazov that always faced the sun.', 'The city has one of the world\'s largest carpet museums, housing the world\'s biggest hand-knotted carpet.', 'Ashgabat means "City of Love" in Persian — from "ashk" (love) and "abad" (city/settlement).'] },
   'Milan':          { country: 'Italy', facts: ['Milan is the fashion capital of the world, home to the bi-annual Fashion Week that sets global trends.', 'Leonardo da Vinci\'s "The Last Supper" is painted directly on a church wall in Milan — it\'s not a canvas painting.', 'Milan\'s Duomo Cathedral took nearly 600 years to complete — construction began in 1386 and finished in 1965.', 'La Scala opera house, opened in 1778, is considered the most prestigious opera venue in the world.', 'Galleria Vittorio Emanuele II, opened in 1877, is one of the world\'s oldest shopping malls.'] },
   'Trondheim':      { country: 'Norway', facts: ['Trondheim was Norway\'s capital for centuries and remains the country\'s traditional coronation city.', 'The Nidaros Cathedral is the northernmost medieval cathedral in the world and a major pilgrimage destination.', 'Trondheim is home to NTNU, Norway\'s largest university and a leading European science and technology hub.', 'The city has the world\'s only bicycle lift (Trampe/CycloCable), installed in 1993 to help cyclists up a steep hill.', 'Trondheim hosted the 1997 World Cycling Championships and is renowned as one of Scandinavia\'s best cycling cities.'] },
@@ -891,7 +1287,7 @@ const CITY_DATA = {
 
 const factIndices = {};
 
-function showRoute(targetEl) {
+function showRoute(targetEl, animate) {
   if (targetEl.dataset.name === 'PD | Global Design') return;
   clearRoute();
   activeTarget = targetEl;
@@ -906,38 +1302,29 @@ function showRoute(targetEl) {
 
   const d = buildSmoothPath(points);
 
-  // Measure length
   const tmp = document.createElementNS('http://www.w3.org/2000/svg','path');
   tmp.setAttribute('d', d); pathSvg.appendChild(tmp);
   const len = tmp.getTotalLength(); pathSvg.removeChild(tmp);
 
   pathSvg.innerHTML = `
     <path class="route-line-bg" d="${d}" />
-    <path class="route-line" d="${d}" stroke-dasharray="${len}" stroke-dashoffset="${len}"
-      style="--path-length:${len}; animation: drawRoute 0.9s cubic-bezier(0.16,1,0.3,1) forwards;" />
-    <path class="route-line-animated" d="${d}" opacity="0"
-      style="animation: marchAnts 1.5s linear infinite 0.9s; animation-fill-mode: forwards;"
-      onanimationstart="this.setAttribute('opacity','0.45')" />
+    <path class="route-line" id="anim-route-main" d="${d}" stroke-dasharray="${len}" stroke-dashoffset="${len}" />
+    <path class="route-line-animated" id="anim-route-ants" d="${d}" opacity="0" />
   `;
+  routePixelLength = len;
 
-  // Origin marker
   originDot.style.cssText = `display:block; left:${ORIGIN.x}px; top:${ORIGIN.y}px;`;
   originRing.style.cssText = `display:block; left:${ORIGIN.x}px; top:${ORIGIN.y}px;`;
+  destMarker.style.cssText = `display:flex; left:${dest.x}px; top:${dest.y}px; opacity:0;`;
+  pulseRing.style.cssText = `display:none; left:${dest.x}px; top:${dest.y}px;`;
 
-  // Dest marker with drop animation
-  destMarker.style.cssText = `display:flex; left:${dest.x}px; top:${dest.y}px; animation: markerDrop 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.6s both;`;
-  pulseRing.style.cssText = `display:block; left:${dest.x}px; top:${dest.y}px;`;
-
-  // Dim/highlight
   allRooms.forEach(el => { el === targetEl ? el.classList.add('highlight') : el.classList.add('dimmed'); });
 
-  // Walk time
   const roomName = targetEl.dataset.name;
-  const flag = COUNTRY_EMOJI[roomName] || '📍';
+  const flag = COUNTRY_EMOJI[roomName] || '\uD83D\uDCCD';
   rcDest.textContent = flag + ' ' + roomName;
   rcTo.textContent = flag + ' ' + roomName;
 
-  // Country + fact
   const cityData = CITY_DATA[roomName];
   if (cityData) {
     rcCountryText.textContent = cityData.country;
@@ -954,6 +1341,10 @@ function showRoute(targetEl) {
   }
 
   routeCard.classList.add('show');
+  if (animate) {
+    if (window.innerWidth >= 768) showRouteDesktop();
+    else animatePanToRoute(dest.x, dest.y, len, points);
+  }
 }
 
 const NAV_EXCLUDED_TYPES = ['Phone Booth', 'Restroom', 'Amenity', 'Wellness', 'Lounge Area'];
@@ -962,7 +1353,7 @@ allRooms.forEach(el => {
   el.addEventListener('click', e => {
     e.stopPropagation();
     if (activeTarget === el) { clearRoute(); return; }
-    showRoute(el);
+    showRoute(el, true);
   });
 });
 
@@ -994,7 +1385,7 @@ function goToFact(name, direction) {
   updateFactDots(name);
 }
 
-// Touch swipe
+// Touch swipe on fact card
 let swipeStartX = 0, swipeStartY = 0;
 rcFactBox.addEventListener('touchstart', e => {
   swipeStartX = e.touches[0].clientX;
@@ -1009,7 +1400,7 @@ rcFactBox.addEventListener('touchend', e => {
   }
 }, { passive: true });
 
-// Mouse drag
+// Mouse drag on fact card
 let dragStartX = 0, factDragging = false;
 rcFactBox.addEventListener('mousedown', e => { dragStartX = e.clientX; factDragging = true; e.stopPropagation(); });
 rcFactBox.addEventListener('mouseup', e => {
@@ -1029,14 +1420,13 @@ let activeIdx = -1;
 
 function positionDropdown() {
   const bar = document.querySelector('.top-bar');
-  const rect = bar.getBoundingClientRect();
-  dropdown.style.top = (rect.bottom + 6) + 'px';
-  dropdown.style.width = rect.width + 'px';
-  dropdown.style.left = rect.left + 'px';
+  const barRect = bar.getBoundingClientRect();
+  dropdown.style.top = (barRect.bottom + 6) + 'px';
+  dropdown.style.left = barRect.left + 'px';
+  dropdown.style.width = barRect.width + 'px';
   dropdown.style.transform = 'none';
 }
 
-// Build room list (exclude non-meeting-room types)
 const SEARCH_EXCLUDED_TYPES = ['Phone Booth', 'Restroom', 'Amenity', 'Wellness', 'Lounge Area'];
 const roomList = [];
 allRooms.forEach(el => {
@@ -1046,28 +1436,23 @@ allRooms.forEach(el => {
 });
 
 function getIcon(type) {
-  if (type.includes('Restroom')) return { emoji: '🚻', cls: 'restroom' };
-  if (type.includes('Amenity') || type.includes('Wellness')) return { emoji: '☕', cls: 'amenity' };
-  if (type.includes('Lounge')) return { emoji: '☕', cls: 'lounge' };
-  if (type.includes('Design')) return { emoji: '🎨', cls: 'meeting' };
-  if (type.includes('Desk')) return { emoji: '💻', cls: 'meeting' };
-  return { emoji: '🪑', cls: 'meeting' };
+  if (type.includes('Restroom')) return { emoji: '\uD83D\uDEB3', cls: 'restroom' };
+  if (type.includes('Amenity') || type.includes('Wellness')) return { emoji: '\u2615', cls: 'amenity' };
+  if (type.includes('Lounge')) return { emoji: '\u2615', cls: 'lounge' };
+  if (type.includes('Design')) return { emoji: '\uD83C\uDFA8', cls: 'meeting' };
+  if (type.includes('Desk')) return { emoji: '\uD83D\uDCBB', cls: 'meeting' };
+  return { emoji: '\uD83E\uDE91', cls: 'meeting' };
 }
 
-// Fuzzy match: allows typos by checking if chars appear in order, plus Levenshtein for ranking
 function fuzzyMatch(query, target) {
   const q = query.toLowerCase(), t = target.toLowerCase();
-  // Exact substring match - highest priority
   if (t.includes(q)) return { match: true, score: 0, type: 'exact' };
-  // Starts with
   if (t.startsWith(q)) return { match: true, score: 0, type: 'starts' };
-  // Fuzzy: chars appear in order (allows skipping)
   let qi = 0;
   for (let ti = 0; ti < t.length && qi < q.length; ti++) {
     if (t[ti] === q[qi]) qi++;
   }
   if (qi === q.length) return { match: true, score: 1, type: 'fuzzy' };
-  // Levenshtein distance for typo tolerance
   const lev = levenshtein(q, t.substring(0, Math.max(q.length + 2, 4)));
   if (lev <= Math.max(1, Math.floor(q.length / 3))) return { match: true, score: 2 + lev, type: 'typo' };
   return { match: false };
@@ -1090,7 +1475,6 @@ function highlightMatch(name, query) {
   if (idx >= 0) {
     return name.slice(0, idx) + '<mark>' + name.slice(idx, idx + q.length) + '</mark>' + name.slice(idx + q.length);
   }
-  // For fuzzy, highlight matching chars
   let result = '', qi = 0;
   for (let i = 0; i < name.length; i++) {
     if (qi < q.length && name[i].toLowerCase() === q[qi]) {
@@ -1130,31 +1514,25 @@ function updateDropdown() {
         <div class="search-item-name">${highlightMatch(r.name, q)}</div>
         <div class="search-item-type">${r.type}</div>
       </div>
-      <div class="search-item-arrow">→</div>
+      <div class="search-item-arrow">\u2192</div>
     </div>`;
   }).join('');
 
   positionDropdown(); dropdown.classList.add('open');
   activeIdx = 0;
 
-  // Attach click handlers
   dropdown.querySelectorAll('.search-item').forEach((item, i) => {
-    item.addEventListener('click', () => {
-      selectResult(results[i]);
-    });
-    item.addEventListener('mouseenter', () => {
-      setActiveItem(i);
-    });
+    item.addEventListener('click', () => { selectResult(results[i]); });
+    item.addEventListener('mouseenter', () => { setActiveItem(i); });
   });
 
-  // Show route for first result
   showRoute(results[0].el);
 }
 
 function selectResult(result) {
   searchInput.value = result.name;
   closeDropdown();
-  showRoute(result.el);
+  showRoute(result.el, true);
   searchInput.blur();
 }
 
@@ -1199,9 +1577,7 @@ searchInput.addEventListener('keydown', e => {
   } else if (e.key === 'Enter') {
     e.preventDefault();
     const results = getCurrentResults();
-    if (results.length > 0 && activeIdx >= 0 && activeIdx < results.length) {
-      selectResult(results[activeIdx]);
-    }
+    if (results.length > 0 && activeIdx >= 0 && activeIdx < results.length) selectResult(results[activeIdx]);
   } else if (e.key === 'Escape') {
     closeDropdown();
     searchInput.blur();
@@ -1214,6 +1590,191 @@ searchInput.addEventListener('focus', () => {
 
 document.addEventListener('click', e => {
   if (!e.target.closest('.top-bar') && !e.target.closest('.search-dropdown')) closeDropdown();
+});
+
+// ========== PAN-TO ANIMATION ==========
+const ZOOM_MS  = 1500;
+const PAN_MS   = 3000;
+const PAN_EASE = 'cubic-bezier(0.35, 0, 0.55, 1)';
+
+// Desktop: draw route in place, no pan/zoom
+function showRouteDesktop() {
+  const DRAW_MS = 900;
+  const mainLine = document.getElementById('anim-route-main');
+  if (mainLine) mainLine.style.animation = `drawRoute ${DRAW_MS}ms ease-out forwards`;
+  setTimeout(() => {
+    destMarker.style.opacity = '1';
+    destMarker.style.animation = 'markerDrop 0.5s cubic-bezier(0.34,1.56,0.64,1) both';
+    pulseRing.style.display = 'block';
+    const ants = document.getElementById('anim-route-ants');
+    if (ants) { ants.setAttribute('opacity', '0.45'); ants.style.animation = 'marchAnts 1.5s linear infinite'; }
+  }, DRAW_MS);
+}
+
+function animatePanToRoute(destX, destY, pathLen, routePoints) {
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const isPortrait = vh > vw;
+  const focusY = isPortrait ? vh * 0.38 : vh * 0.44;
+  const focusX = vw / 2;
+
+  function panFor(mx, my, s) {
+    const R = rotation * Math.PI / 180;
+    const dx = mx - 780, dy = my - 440;
+    const rx = dx * Math.cos(R) + dy * Math.sin(R);
+    const ry = -dx * Math.sin(R) + dy * Math.cos(R);
+    return { x: focusX - 780 - rx * s, y: focusY - 440 - ry * s };
+  }
+
+  function applyTransform(px, py, s) {
+    panX = px; panY = py; scale = s;
+    world.style.transform = `translate(${px}px,${py}px) scale(${s}) rotate(${rotation}deg)`;
+  }
+
+  function ease(t) { return t * t * (3 - 2 * t); }
+
+  const startScale = scale;
+  const zoomScale  = Math.min(startScale * 2.5, 2.2);
+  const panScale   = Math.min(startScale * 1.5, 1.35);
+
+  const dists = [0];
+  for (let i = 1; i < routePoints.length; i++) {
+    const ddx = routePoints[i].x - routePoints[i - 1].x;
+    const ddy = routePoints[i].y - routePoints[i - 1].y;
+    dists.push(dists[i - 1] + Math.sqrt(ddx * ddx + ddy * ddy));
+  }
+
+  const o = panFor(ORIGIN.x, ORIGIN.y, startScale);
+  world.style.transition = 'none';
+  applyTransform(o.x, o.y, startScale);
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const zo = panFor(ORIGIN.x, ORIGIN.y, zoomScale);
+      world.style.transition = `transform ${ZOOM_MS}ms ${PAN_EASE}`;
+      applyTransform(zo.x, zo.y, zoomScale);
+
+      setTimeout(() => {
+        world.style.transition = 'none';
+
+        const mainLine = document.getElementById('anim-route-main');
+        if (mainLine) mainLine.style.animation = `drawRoute ${PAN_MS}ms ${PAN_EASE} forwards`;
+
+        const svgPathLen = mainLine ? mainLine.getTotalLength() : 0;
+
+        let smoothX = panX, smoothY = panY;
+        const t0 = performance.now();
+
+        function tick(now) {
+          const t     = Math.min((now - t0) / PAN_MS, 1);
+          const eased = ease(t);
+          const s     = zoomScale + (panScale - zoomScale) * eased;
+
+          if (t < 1) {
+            const lookT  = Math.min(eased + 0.12, 1);
+            const pt     = (mainLine && svgPathLen > 0)
+              ? mainLine.getPointAtLength(lookT * svgPathLen)
+              : { x: destX, y: destY };
+            const target = panFor(pt.x, pt.y, s);
+
+            const alpha = 0.035 + ease(t) * 0.08;
+            smoothX += (target.x - smoothX) * alpha;
+            smoothY += (target.y - smoothY) * alpha;
+            applyTransform(smoothX, smoothY, s);
+            requestAnimationFrame(tick);
+          } else {
+            const dst = panFor(destX, destY, s);
+            applyTransform(dst.x, dst.y, s);
+            world.style.transition = 'transform 0.08s ease-out';
+          }
+        }
+
+        requestAnimationFrame(tick);
+
+        setTimeout(() => {
+          destMarker.style.opacity = '1';
+          destMarker.style.animation = 'markerDrop 0.5s cubic-bezier(0.34,1.56,0.64,1) both';
+          pulseRing.style.display = 'block';
+        }, PAN_MS - 350);
+
+        setTimeout(() => {
+          const ants = document.getElementById('anim-route-ants');
+          if (ants) { ants.setAttribute('opacity', '0.45'); ants.style.animation = 'marchAnts 1.5s linear infinite'; }
+        }, PAN_MS);
+
+      }, ZOOM_MS);
+    });
+  });
+}
+
+// ========== INTRO SCREEN ==========
+const introScreen = document.getElementById('intro-screen');
+const introInput  = document.getElementById('intro-input');
+const introDropEl = document.getElementById('intro-dropdown');
+
+// Wire ticker items — click launches route
+document.querySelectorAll('.intro-ticker-item').forEach(chip => {
+  chip.addEventListener('click', () => {
+    const name = chip.querySelector('.intro-ticker-name').textContent.trim();
+    const roomEl = [...roomList].find(r => r.name === name)?.el;
+    if (roomEl) launchFromIntro(roomEl);
+  });
+});
+
+function launchFromIntro(roomEl) {
+  introScreen.classList.add('leaving');
+  setTimeout(() => { showRoute(roomEl, true); }, 250);
+  setTimeout(() => { introScreen.style.display = 'none'; }, 600);
+}
+
+function updateIntroDropdown() {
+  const q = introInput.value.trim();
+  if (!q) { introDropEl.classList.remove('open'); introDropEl.innerHTML = ''; return; }
+
+  const results = [];
+  roomList.forEach(room => {
+    const m = fuzzyMatch(q, room.name);
+    if (m.match) results.push({ ...room, score: m.score });
+  });
+  results.sort((a, b) => a.score - b.score || a.name.localeCompare(b.name));
+
+  if (!results.length) {
+    introDropEl.innerHTML = '<div class="search-empty">No rooms found</div>';
+    introDropEl.classList.add('open');
+    return;
+  }
+
+  introDropEl.innerHTML = results.slice(0, 8).map((r, i) => {
+    const icon = getIcon(r.type);
+    const flag = COUNTRY_EMOJI[r.name];
+    return `<div class="search-item" data-idx="${i}">
+      <div class="search-item-icon ${icon.cls}">${flag || icon.emoji}</div>
+      <div class="search-item-info">
+        <div class="search-item-name">${highlightMatch(r.name, q)}</div>
+        <div class="search-item-type">${r.type}</div>
+      </div>
+      <div class="search-item-arrow">\u2192</div>
+    </div>`;
+  }).join('');
+
+  introDropEl.classList.add('open');
+  introDropEl.querySelectorAll('.search-item').forEach((item, i) => {
+    item.addEventListener('click', () => launchFromIntro(results[i].el));
+  });
+}
+
+introInput.addEventListener('input', updateIntroDropdown);
+
+introInput.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  const q = introInput.value.trim();
+  if (!q) return;
+  const results = [];
+  roomList.forEach(room => {
+    const m = fuzzyMatch(q, room.name);
+    if (m.match) results.push({ ...room, score: m.score });
+  });
+  results.sort((a, b) => a.score - b.score);
+  if (results.length) launchFromIntro(results[0].el);
 });
 </script>
 </body>
