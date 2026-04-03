@@ -146,11 +146,12 @@
 
   /* ── Floating map controls ── */
   .float-zoom {
+    display: none; /* hidden on mobile */
     position: fixed;
     right: 16px;
     bottom: calc(var(--safe-bottom) + 16px);
     z-index: 100;
-    display: flex; flex-direction: column;
+    flex-direction: column;
     background: rgba(255,255,255,0.92);
     backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
     border-radius: 14px;
@@ -161,20 +162,22 @@
 
   /* Compass + rotate pill sit above the zoom stack */
   .float-row {
+    display: none; /* hidden on mobile */
     position: fixed;
     right: 16px;
     bottom: calc(var(--safe-bottom) + 128px);
     z-index: 100;
-    display: flex; flex-direction: column; gap: 8px;
+    flex-direction: column; gap: 8px;
     align-items: flex-end;
   }
 
   .float-badge {
+    display: none; /* hidden on mobile */
     position: fixed;
     left: 16px;
     bottom: calc(var(--safe-bottom) + 16px);
     z-index: 100;
-    display: flex; align-items: center; gap: 7px;
+    align-items: center; gap: 7px;
     background: rgba(255,255,255,0.92);
     backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
     border-radius: 20px; padding: 8px 14px;
@@ -185,19 +188,22 @@
   .float-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
 
   @media (min-width: 768px) {
-    .float-badge {
-      left: 24px;
-      bottom: 24px;
-      border-radius: 12px;
-      padding: 10px 16px;
-    }
     .float-zoom {
+      display: flex;
       right: 24px;
       bottom: 24px;
     }
     .float-row {
+      display: flex;
       right: 24px;
       bottom: 128px;
+    }
+    .float-badge {
+      display: flex;
+      left: 24px;
+      bottom: 24px;
+      border-radius: 12px;
+      padding: 10px 16px;
     }
   }
 
