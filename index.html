@@ -533,6 +533,7 @@
     border-radius: 22px;
     box-shadow: 0 12px 48px rgba(0,0,0,0.13), 0 2px 8px rgba(0,0,0,0.06);
     border: 1px solid rgba(0,0,0,0.06); overflow: hidden;
+    position: relative; z-index: 1;
   }
   .intro-search-row {
     display: flex; align-items: center; gap: 12px; padding: 18px 20px;
@@ -594,7 +595,7 @@
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
       </svg>
-      <input type="text" id="search" placeholder="Search rooms…" autocomplete="off" />
+      <input type="text" id="search" placeholder="Browse or search rooms…" autocomplete="off" />
     </div>
   </div>
   <div class="search-dropdown" id="search-dropdown"></div>
@@ -879,7 +880,7 @@
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
         </svg>
-        <input type="text" id="intro-input" placeholder="Search for a room&hellip;" autocomplete="off" />
+        <input type="text" id="intro-input" placeholder="Browse or search rooms&hellip;" autocomplete="off" />
       </div>
       <div id="intro-dropdown" class="intro-dropdown"></div>
     </div>
@@ -1505,21 +1506,24 @@ function highlightMatch(name, query) {
 
 function updateDropdown() {
   const q = searchInput.value.trim();
-  if (!q) { closeDropdown(); clearRoute(); return; }
 
-  const results = [];
-  roomList.forEach(room => {
-    const m = fuzzyMatch(q, room.name);
-    if (m.match) results.push({ ...room, score: m.score, matchType: m.type });
-  });
-
-  results.sort((a, b) => a.score - b.score || a.name.localeCompare(b.name));
+  let results;
+  if (!q) {
+    results = roomList.map(room => ({ ...room, score: 0 }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  } else {
+    results = [];
+    roomList.forEach(room => {
+      const m = fuzzyMatch(q, room.name);
+      if (m.match) results.push({ ...room, score: m.score, matchType: m.type });
+    });
+    results.sort((a, b) => a.score - b.score || a.name.localeCompare(b.name));
+  }
 
   if (results.length === 0) {
     dropdown.innerHTML = '<div class="search-empty">No rooms found</div>';
     positionDropdown(); dropdown.classList.add('open');
     activeIdx = -1;
-    clearRoute();
     return;
   }
 
@@ -1527,10 +1531,11 @@ function updateDropdown() {
     const icon = getIcon(r.type);
     const flag = COUNTRY_EMOJI[r.name];
     const displayEmoji = flag || icon.emoji;
-    return `<div class="search-item${i === 0 ? ' active' : ''}" data-idx="${i}">
+    const displayName = q ? highlightMatch(r.name, q) : r.name;
+    return `<div class="search-item${i === 0 && q ? ' active' : ''}" data-idx="${i}">
       <div class="search-item-icon ${icon.cls}">${displayEmoji}</div>
       <div class="search-item-info">
-        <div class="search-item-name">${highlightMatch(r.name, q)}</div>
+        <div class="search-item-name">${displayName}</div>
         <div class="search-item-type">${r.type}</div>
       </div>
       <div class="search-item-arrow">\u2192</div>
@@ -1538,7 +1543,7 @@ function updateDropdown() {
   }).join('');
 
   positionDropdown(); dropdown.classList.add('open');
-  activeIdx = 0;
+  activeIdx = q ? 0 : -1;
 
   dropdown.querySelectorAll('.search-item').forEach((item, i) => {
     item.addEventListener('click', () => { selectResult(results[i]); });
@@ -1602,11 +1607,23 @@ searchInput.addEventListener('keydown', e => {
 });
 
 searchInput.addEventListener('focus', () => {
-  if (searchInput.value.trim()) updateDropdown();
+  clearRoute();
+  updateDropdown();
 });
 
 document.addEventListener('click', e => {
-  if (!e.target.closest('.top-bar') && !e.target.closest('.search-dropdown')) closeDropdown();
+  if (!e.target.closest('.top-bar') && !e.target.closest('.search-dropdown')) {
+    closeDropdown();
+    searchInput.blur();
+  }
+});
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.intro-search-card')) {
+    introDropEl.classList.remove('open');
+    introDropEl.innerHTML = '';
+    introInput.blur();
+  }
 });
 
 // ========== PAN-TO ANIMATION ==========
@@ -1745,14 +1762,19 @@ function launchFromIntro(roomEl) {
 
 function updateIntroDropdown() {
   const q = introInput.value.trim();
-  if (!q) { introDropEl.classList.remove('open'); introDropEl.innerHTML = ''; return; }
 
-  const results = [];
-  roomList.forEach(room => {
-    const m = fuzzyMatch(q, room.name);
-    if (m.match) results.push({ ...room, score: m.score });
-  });
-  results.sort((a, b) => a.score - b.score || a.name.localeCompare(b.name));
+  let results;
+  if (!q) {
+    results = roomList.map(room => ({ ...room, score: 0 }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  } else {
+    results = [];
+    roomList.forEach(room => {
+      const m = fuzzyMatch(q, room.name);
+      if (m.match) results.push({ ...room, score: m.score });
+    });
+    results.sort((a, b) => a.score - b.score || a.name.localeCompare(b.name));
+  }
 
   if (!results.length) {
     introDropEl.innerHTML = '<div class="search-empty">No rooms found</div>';
@@ -1760,13 +1782,14 @@ function updateIntroDropdown() {
     return;
   }
 
-  introDropEl.innerHTML = results.slice(0, 8).map((r, i) => {
+  introDropEl.innerHTML = results.map((r, i) => {
     const icon = getIcon(r.type);
     const flag = COUNTRY_EMOJI[r.name];
+    const displayName = q ? highlightMatch(r.name, q) : r.name;
     return `<div class="search-item" data-idx="${i}">
       <div class="search-item-icon ${icon.cls}">${flag || icon.emoji}</div>
       <div class="search-item-info">
-        <div class="search-item-name">${highlightMatch(r.name, q)}</div>
+        <div class="search-item-name">${displayName}</div>
         <div class="search-item-type">${r.type}</div>
       </div>
       <div class="search-item-arrow">\u2192</div>
@@ -1780,6 +1803,7 @@ function updateIntroDropdown() {
 }
 
 introInput.addEventListener('input', updateIntroDropdown);
+introInput.addEventListener('focus', updateIntroDropdown);
 
 introInput.addEventListener('keydown', e => {
   if (e.key !== 'Enter') return;
